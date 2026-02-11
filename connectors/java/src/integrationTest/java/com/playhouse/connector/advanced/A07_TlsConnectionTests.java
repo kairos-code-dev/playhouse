@@ -48,7 +48,6 @@ class A07_TlsConnectionTests extends BaseIntegrationTest {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpTlsPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -87,7 +86,6 @@ class A07_TlsConnectionTests extends BaseIntegrationTest {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpsPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 

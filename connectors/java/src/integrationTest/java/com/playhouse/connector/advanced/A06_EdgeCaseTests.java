@@ -72,7 +72,6 @@ class A06_EdgeCaseTests {
         // Init을 호출하지 않음
 
         // Act & Assert - Java connector throws IllegalStateException from checkInitialized()
-        connector.setStageId(stageInfo.getStageId());
         assertThatThrownBy(() -> {
             CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
             connectFuture.get(5, TimeUnit.SECONDS);
@@ -115,7 +114,6 @@ class A06_EdgeCaseTests {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -147,7 +145,6 @@ class A06_EdgeCaseTests {
                 .build());
 
         // Act
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(
                 "invalid.host.that.does.not.exist.local",
                 tcpPort
@@ -173,7 +170,6 @@ class A06_EdgeCaseTests {
                 .build());
 
         // Act
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(
                 host,
                 59999  // 사용하지 않는 포트
@@ -198,7 +194,6 @@ class A06_EdgeCaseTests {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -228,7 +223,6 @@ class A06_EdgeCaseTests {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -255,7 +249,6 @@ class A06_EdgeCaseTests {
         connector.close();
 
         // Act & Assert - Java connector throws IllegalStateException from checkInitialized()
-        connector.setStageId(stageInfo.getStageId());
         assertThatThrownBy(() -> {
             CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
             connectFuture.get(5, TimeUnit.SECONDS);
@@ -273,7 +266,6 @@ class A06_EdgeCaseTests {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -287,8 +279,8 @@ class A06_EdgeCaseTests {
     }
 
     @Test
-    @DisplayName("A-06-11: StageId와 StageType이 Connector에 저장된다")
-    void stageIdAndStageTypeStored() throws Exception {
+    @DisplayName("A-06-11: 연결 직후 StageId는 0이다")
+    void stageIdIsZeroBeforeAuthentication() throws Exception {
         // Arrange
         createConnectorWithConfig(ConnectorConfig.builder()
                 .requestTimeoutMs(5000)
@@ -296,13 +288,11 @@ class A06_EdgeCaseTests {
                 .build());
 
         // Act
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
         // Assert
-        assertThat(connector.getStageId()).isEqualTo(stageInfo.getStageId());
-        // StageType은 connect 시점에 설정됨
+        assertThat(connector.getStageId()).isZero();
     }
 
     @Test
@@ -314,7 +304,6 @@ class A06_EdgeCaseTests {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -349,7 +338,6 @@ class A06_EdgeCaseTests {
                 .heartbeatIntervalMs(10000)
                 .build());
 
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 

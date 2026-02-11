@@ -55,7 +55,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
     @DisplayName("A-01-01: WebSocket으로 서버에 연결할 수 있다")
     void webSocketConnectionSuccess() throws Exception {
         // Act
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpPort); // WebSocket은 HTTP 포트 사용
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -67,7 +66,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
     @DisplayName("A-01-02: WebSocket 연결 후 인증이 성공한다")
     void webSocketAuthenticationSuccess() throws Exception {
         // Arrange
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -92,7 +90,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
     @DisplayName("A-01-03: WebSocket으로 Echo Request-Response가 동작한다")
     void webSocketEchoRequestResponse() throws Exception {
         // Arrange
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -123,7 +120,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
     @DisplayName("A-01-04: WebSocket으로 Push 메시지를 수신할 수 있다")
     void webSocketPushMessageReceived() throws Exception {
         // Arrange
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -158,7 +154,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
     @DisplayName("A-01-05: WebSocket 연결 해제 후 재연결이 가능하다")
     void webSocketReconnection() throws Exception {
         // Arrange
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
         assertThat(connector.isConnected()).isTrue();
@@ -170,7 +165,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
 
         // Act - Reconnect
         var newStage = testServer.createTestStage();
-        connector.setStageId(newStage.getStageId());
         CompletableFuture<Void> reconnectFuture = connector.connectAsync(host, httpPort);
         reconnectFuture.get(5, TimeUnit.SECONDS);
 
@@ -182,7 +176,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
     @DisplayName("A-01-06: WebSocket으로 병렬 요청을 처리할 수 있다")
     void webSocketParallelRequests() throws Exception {
         // Arrange
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, httpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -227,7 +220,6 @@ class A01_WebSocketConnectionTests extends BaseIntegrationTest {
         });
 
         // Act
-        connector.setStageId(stageInfo.getStageId());
         connector.connectAsync(host, httpPort);
 
         // Wait for connection with MainThreadAction

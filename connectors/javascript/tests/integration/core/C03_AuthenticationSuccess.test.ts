@@ -126,9 +126,9 @@ describe('C-03: Authentication Success', () => {
             const wsUrl = testContext['testServer'].wsUrl;
 
             // When: 3 connectors connect and authenticate
-            await connector1.connect(wsUrl, stage1.stageId, stage1.stageType);
-            await connector2.connect(wsUrl, stage2.stageId, stage2.stageType);
-            await connector3.connect(wsUrl, stage3.stageId, stage3.stageType);
+            await connector1.connect(wsUrl);
+            await connector2.connect(wsUrl);
+            await connector3.connect(wsUrl);
 
             const auth1Payload = serializeAuthenticateRequest({ userId: 'user1', token: 'valid_token' });
             const auth2Payload = serializeAuthenticateRequest({ userId: 'user2', token: 'valid_token' });

@@ -399,15 +399,6 @@ public final class Connector implements AutoCloseable {
     }
 
     /**
-     * Stage ID 설정
-     *
-     * @param stageId Stage ID
-     */
-    public void setStageId(long stageId) {
-        this.stageId = stageId;
-    }
-
-    /**
      * 현재 Stage ID 반환
      *
      * @return Stage ID

@@ -54,7 +54,7 @@ public class PlayHouseClient : MonoBehaviour
             Debug.LogError($"Error {errorCode} on {stageType}/{stageId}");
         _connector.OnDisconnect += () => Debug.Log("Disconnected");
 
-        _connector.Connect("127.0.0.1", 34001, 1, "TestStage");
+        _connector.Connect("127.0.0.1", 34001);
     }
 
     private void Update()

@@ -83,7 +83,7 @@ export class BaseIntegrationTest {
         }
 
         const wsUrl = `${this.testServer.wsUrl}`;
-        await this.connector.connect(wsUrl, BigInt(this.stageInfo.stageId));
+        await this.connector.connect(wsUrl);
         return this.connector.isConnected;
     }
 

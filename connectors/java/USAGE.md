@@ -212,10 +212,7 @@ ByteBuffer buffer = packet.getPayloadBuffer(); // Little-endian
 ### Stage ID 관리
 
 ```java
-// Stage ID 설정
-connector.setStageId(12345L);
-
-// 현재 Stage ID 확인
+// Stage ID는 인증 성공 시 Connector 내부에 자동 반영됨
 long currentStageId = connector.getStageId();
 ```
 

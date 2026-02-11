@@ -93,7 +93,6 @@ class A05_MultipleConnectorTests {
         List<CompletableFuture<Void>> connectTasks = new ArrayList<>();
         for (int i = 0; i < testConnectors.size(); i++) {
             Connector connector = testConnectors.get(i);
-            connector.setStageId(stages.get(i).getStageId());
             connectTasks.add(connector.connectAsync(host, tcpPort));
         }
 
@@ -115,7 +114,6 @@ class A05_MultipleConnectorTests {
         List<Connector> testConnectors = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             Connector connector = createConnector();
-            connector.setStageId(stages.get(i).getStageId());
             CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
             connectFuture.get(5, TimeUnit.SECONDS);
             testConnectors.add(connector);
@@ -153,7 +151,6 @@ class A05_MultipleConnectorTests {
         List<Connector> testConnectors = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             Connector connector = createConnector();
-            connector.setStageId(stages.get(i).getStageId());
             CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
             connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -198,7 +195,6 @@ class A05_MultipleConnectorTests {
         List<Connector> testConnectors = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             Connector connector = createConnector();
-            connector.setStageId(stages.get(i).getStageId());
             CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
             connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -242,7 +238,6 @@ class A05_MultipleConnectorTests {
 
         for (int i = 0; i < 3; i++) {
             Connector connector = createConnector();
-            connector.setStageId(sharedStage.getStageId());
             CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
             connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -288,7 +283,6 @@ class A05_MultipleConnectorTests {
             testConnectors.add(connector);
 
             CreateStageResponse stage = extraStages.get(i);
-            connector.setStageId(stage.getStageId());
             connectTasks.add(connector.connectAsync(host, tcpPort));
         }
 
@@ -343,10 +337,8 @@ class A05_MultipleConnectorTests {
             }
         });
 
-        connector1.setStageId(stages.get(0).getStageId());
         connector1.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
 
-        connector2.setStageId(stages.get(1).getStageId());
         connector2.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
 
         AuthenticateRequest auth1 = new AuthenticateRequest("event-user-1", "valid_token");

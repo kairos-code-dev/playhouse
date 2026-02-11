@@ -27,13 +27,12 @@ public class C02_TcpConnectionTests extends BaseIntegrationTest {
         stageInfo = testServer.createTestStage();
 
         // When: TCP 연결 시도
-        connector.setStageId(stageInfo.getStageId());
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
         // Then: 연결이 성공해야 함
         assertThat(connector.isConnected()).isTrue();
-        assertThat(connector.getStageId()).isEqualTo(stageInfo.getStageId());
+        assertThat(connector.getStageId()).isZero();
     }
 
     @Test
@@ -74,7 +73,6 @@ public class C02_TcpConnectionTests extends BaseIntegrationTest {
         });
 
         // When: 연결 시도
-        connector.setStageId(stageInfo.getStageId());
         connector.connectAsync(host, tcpPort);
 
         // OnConnect 이벤트 대기 (MainThreadAction 호출하면서 최대 5초)
@@ -90,10 +88,7 @@ public class C02_TcpConnectionTests extends BaseIntegrationTest {
     @DisplayName("C-02-05: 잘못된 Stage ID로 연결해도 TCP 연결은 성공한다")
     public void connect_withInvalidStageId_tcpConnectionSucceeds() throws Exception {
         // Given: 존재하지 않는 Stage ID
-        long invalidStageId = 999999999L;
-
         // When: 잘못된 Stage ID로 연결 시도
-        connector.setStageId(invalidStageId);
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 
@@ -113,13 +108,12 @@ public class C02_TcpConnectionTests extends BaseIntegrationTest {
         connector.disconnect();
         Thread.sleep(500); // 연결 해제 대기
 
-        CreateStageResponse newStageInfo = testServer.createTestStage();
-        connector.setStageId(newStageInfo.getStageId());
+        testServer.createTestStage();
         CompletableFuture<Void> reconnectFuture = connector.connectAsync(host, tcpPort);
         reconnectFuture.get(5, TimeUnit.SECONDS);
 
         // Then: 재연결이 성공해야 함
         assertThat(connector.isConnected()).isTrue();
-        assertThat(connector.getStageId()).isEqualTo(newStageInfo.getStageId());
+        assertThat(connector.getStageId()).isZero();
     }
 }

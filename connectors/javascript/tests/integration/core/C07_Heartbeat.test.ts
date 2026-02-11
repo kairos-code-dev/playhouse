@@ -142,9 +142,9 @@ describe('C-07: Heartbeat Automatic Handling', () => {
             connector3.init({ requestTimeoutMs: 5000, heartbeatIntervalMs: 10000 });
 
             const wsUrl = testContext['testServer'].wsUrl;
-            await connector1.connect(wsUrl, stage1.stageId, stage1.stageType);
-            await connector2.connect(wsUrl, stage2.stageId, stage2.stageType);
-            await connector3.connect(wsUrl, stage3.stageId, stage3.stageType);
+            await connector1.connect(wsUrl);
+            await connector2.connect(wsUrl);
+            await connector3.connect(wsUrl);
 
             // Authenticate all connectors using protobuf format
             const authPayload1 = serializeAuthenticateRequest({ userId: 'user1', token: 'token1' });

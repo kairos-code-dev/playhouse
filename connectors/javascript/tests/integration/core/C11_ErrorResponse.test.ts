@@ -202,8 +202,8 @@ describe('C-11: Error Response', () => {
             connector2.init({ requestTimeoutMs: 5000, heartbeatIntervalMs: 10000 });
 
             const wsUrl = testContext['testServer'].wsUrl;
-            await connector1.connect(wsUrl, stage1.stageId, stage1.stageType);
-            await connector2.connect(wsUrl, stage2.stageId, stage2.stageType);
+            await connector1.connect(wsUrl);
+            await connector2.connect(wsUrl);
 
             // Use protobuf format authentication
             const authPayload1 = serializeAuthenticateRequest({ userId: 'user1', token: 'token1' });

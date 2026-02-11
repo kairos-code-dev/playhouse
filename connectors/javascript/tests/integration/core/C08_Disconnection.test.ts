@@ -156,7 +156,7 @@ describe('C-08: Disconnection', () => {
 
         const stageInfo = await testContext['testServer'].createStage('TestStage');
         const wsUrl = testContext['testServer'].wsUrl;
-        await tempConnector.connect(wsUrl, stageInfo.stageId, stageInfo.stageType);
+        await tempConnector.connect(wsUrl);
 
         const authPayload = serializeAuthenticateRequest({ userId: 'disposeUser', token: 'valid_token' });
         const authPacket = Packet.fromBytes('AuthenticateRequest', authPayload);

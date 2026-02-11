@@ -63,7 +63,7 @@ describe('A-05: Multiple Connectors', () => {
 
         // When: Connect all simultaneously
         const connectPromises = testConnectors.map((connector, index) =>
-            connector.connect(testServer.wsUrl, stages[index].stageId, stages[index].stageType)
+            connector.connect(testServer.wsUrl)
         );
 
         const results = await Promise.all(connectPromises);
@@ -78,11 +78,7 @@ describe('A-05: Multiple Connectors', () => {
         const testConnectors = Array.from({ length: 3 }, () => createConnector());
 
         for (let i = 0; i < testConnectors.length; i++) {
-            await testConnectors[i].connect(
-                testServer.wsUrl,
-                stages[i].stageId,
-                stages[i].stageType
-            );
+            await testConnectors[i].connect(testServer.wsUrl);
         }
 
         // When: Authenticate each with different user
@@ -105,11 +101,7 @@ describe('A-05: Multiple Connectors', () => {
         const testConnectors = Array.from({ length: 3 }, () => createConnector());
 
         for (let i = 0; i < testConnectors.length; i++) {
-            await testConnectors[i].connect(
-                testServer.wsUrl,
-                stages[i].stageId,
-                stages[i].stageType
-            );
+            await testConnectors[i].connect(testServer.wsUrl);
 
             await authenticate(testConnectors[i], `multi-user-${i}`);
         }
@@ -138,11 +130,7 @@ describe('A-05: Multiple Connectors', () => {
         const testConnectors = Array.from({ length: 3 }, () => createConnector());
 
         for (let i = 0; i < testConnectors.length; i++) {
-            await testConnectors[i].connect(
-                testServer.wsUrl,
-                stages[i].stageId,
-                stages[i].stageType
-            );
+            await testConnectors[i].connect(testServer.wsUrl);
 
             await authenticate(testConnectors[i], `multi-user-${i}`);
         }
@@ -174,11 +162,7 @@ describe('A-05: Multiple Connectors', () => {
 
         // When: Connect all to same stage
         for (let i = 0; i < testConnectors.length; i++) {
-            await testConnectors[i].connect(
-                testServer.wsUrl,
-                sharedStage.stageId,
-                sharedStage.stageType
-            );
+            await testConnectors[i].connect(testServer.wsUrl);
 
             await authenticate(testConnectors[i], `multi-user-${i}`);
         }
@@ -213,7 +197,7 @@ describe('A-05: Multiple Connectors', () => {
 
             const stage = extraStages[i];
             connectPromises.push(
-                connector.connect(testServer.wsUrl, stage.stageId, stage.stageType)
+                connector.connect(testServer.wsUrl)
             );
         }
 
@@ -253,8 +237,8 @@ describe('A-05: Multiple Connectors', () => {
         };
 
         // Connect to different stages
-        await connector1.connect(testServer.wsUrl, stages[0].stageId, stages[0].stageType);
-        await connector2.connect(testServer.wsUrl, stages[1].stageId, stages[1].stageType);
+        await connector1.connect(testServer.wsUrl);
+        await connector2.connect(testServer.wsUrl);
 
         await authenticate(connector1, 'connector1-user');
         await authenticate(connector2, 'connector2-user');

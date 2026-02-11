@@ -132,7 +132,6 @@ public class C08_DisconnectionTests extends BaseIntegrationTest {
 
         // When: 새로운 Stage로 재연결
         CreateStageResponse newStageInfo = testServer.createTestStage();
-        connector.setStageId(newStageInfo.getStageId());
         connector.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
 
         // Then: 재연결이 성공해야 함
@@ -179,7 +178,6 @@ public class C08_DisconnectionTests extends BaseIntegrationTest {
         tempConnector.init(com.playhouse.connector.ConnectorConfig.defaultConfig());
 
         CreateStageResponse stageInfo = testServer.createTestStage();
-        tempConnector.setStageId(stageInfo.getStageId());
         tempConnector.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
 
         TestMessages.AuthenticateRequest authRequest = new TestMessages.AuthenticateRequest("disposeUser", "valid_token");

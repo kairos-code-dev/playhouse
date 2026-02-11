@@ -99,7 +99,6 @@ public abstract class BaseIntegrationTest {
     protected boolean createStageAndConnect(String stageType) throws Exception {
         stageInfo = testServer.createStage(stageType);
 
-        connector.setStageId(stageInfo.getStageId());
 
         CompletableFuture<Void> connectFuture = connector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);

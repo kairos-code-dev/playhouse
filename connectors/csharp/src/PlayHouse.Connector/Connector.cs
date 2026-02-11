@@ -125,14 +125,6 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
         _clientNetwork.Connect(host, port, debugMode);
     }
 
-    /// <summary>
-    /// Legacy overload. stageId is ignored because stage assignment is resolved after authentication.
-    /// </summary>
-    public void Connect(string host, int port, long stageId, string stageType, bool debugMode = false)
-    {
-        _stageType = stageType ?? string.Empty;
-        Connect(host, port, debugMode);
-    }
 
     /// <summary>
     /// 서버에 비동기 연결
@@ -152,15 +144,6 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
         _stageId = 0;
         _stageType = string.Empty;
         return await _clientNetwork.ConnectAsync(host, port, debugMode);
-    }
-
-    /// <summary>
-    /// Legacy overload. stageId is ignored because stage assignment is resolved after authentication.
-    /// </summary>
-    public async Task<bool> ConnectAsync(string host, int port, long stageId, string stageType, bool debugMode = false)
-    {
-        _stageType = stageType ?? string.Empty;
-        return await ConnectAsync(host, port, debugMode);
     }
 
     /// <summary>

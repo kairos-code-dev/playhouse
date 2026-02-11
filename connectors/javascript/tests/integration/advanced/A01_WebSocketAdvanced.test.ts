@@ -28,11 +28,7 @@ describe('A-01: WebSocket Advanced', () => {
 
         // When: Attempt WebSocket connection
         const wsUrl = testContext['testServer'].wsUrl;
-        const connected = await testContext['connector']!.connect(
-            wsUrl,
-            stageInfo.stageId,
-            stageInfo.stageType
-        );
+        const connected = await testContext['connector']!.connect(wsUrl);
 
         // Then: Connection should succeed
         expect(connected).toBe(true);
@@ -45,11 +41,7 @@ describe('A-01: WebSocket Advanced', () => {
 
         // When: Attempt WSS connection
         const wssUrl = testContext['testServer'].wssUrl;
-        const connected = await testContext['connector']!.connect(
-            wssUrl,
-            stageInfo.stageId,
-            stageInfo.stageType
-        );
+        const connected = await testContext['connector']!.connect(wssUrl);
 
         // Then: Connection should succeed
         expect(connected).toBe(true);
@@ -126,11 +118,7 @@ describe('A-01: WebSocket Advanced', () => {
         // And: Reconnect to new stage
         const newStage = await testContext['testServer'].createStage();
         const wsUrl = testContext['testServer'].wsUrl;
-        const reconnected = await testContext['connector']!.connect(
-            wsUrl,
-            newStage.stageId,
-            newStage.stageType
-        );
+        const reconnected = await testContext['connector']!.connect(wsUrl);
 
         // Then: Reconnection should succeed
         expect(reconnected).toBe(true);
@@ -169,7 +157,7 @@ describe('A-01: WebSocket Advanced', () => {
 
         // When: Connect using callback-based method
         const wsUrl = testContext['testServer'].wsUrl;
-        testContext['connector']!.connect(wsUrl, stageInfo.stageId, stageInfo.stageType);
+        testContext['connector']!.connect(wsUrl);
 
         // Wait for OnConnect event
         const completed = await testContext['waitForConditionWithMainThread'](

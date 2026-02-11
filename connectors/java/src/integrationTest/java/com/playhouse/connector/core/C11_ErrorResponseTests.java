@@ -220,8 +220,6 @@ public class C11_ErrorResponseTests extends BaseIntegrationTest {
             connector1.init(ConnectorConfig.defaultConfig());
             connector2.init(ConnectorConfig.defaultConfig());
 
-            connector1.setStageId(stage1.getStageId());
-            connector2.setStageId(stage2.getStageId());
 
             connector1.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
             connector2.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);

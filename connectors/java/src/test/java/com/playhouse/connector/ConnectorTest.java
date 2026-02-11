@@ -86,16 +86,12 @@ class ConnectorTest {
     }
 
     @Test
-    void testStageIdManagement() {
+    void testStageIdDefaultValue() {
         // Given
         connector.init();
-        long testStageId = 12345L;
-
-        // When
-        connector.setStageId(testStageId);
 
         // Then
-        assertThat(connector.getStageId()).isEqualTo(testStageId);
+        assertThat(connector.getStageId()).isZero();
     }
 
     @Test

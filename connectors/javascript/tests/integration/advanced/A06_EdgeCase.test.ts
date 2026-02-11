@@ -54,11 +54,7 @@ describe('A-06: Edge Cases', () => {
 
         // When & Then: Connect should fail or throw
         try {
-            const connected = await connector.connect(
-                testServer.wsUrl,
-                stageInfo!.stageId,
-                stageInfo!.stageType
-            );
+            const connected = await connector.connect(testServer.wsUrl);
             // If it doesn't throw, it should fail
             expect(connected).toBe(false);
         } catch (error) {
@@ -96,11 +92,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         await authenticate(connector!, 'timeout-user');
 
@@ -124,11 +116,7 @@ describe('A-06: Edge Cases', () => {
         // When: Try to connect to invalid host
         // Then: Connection should throw an error
         await expect(
-            connector!.connect(
-                'ws://invalid.host.that.does.not.exist.local:8080/ws',
-                stageInfo!.stageId,
-                stageInfo!.stageType
-            )
+            connector!.connect('ws://invalid.host.that.does.not.exist.local:8080/ws')
         ).rejects.toThrow();
         expect(connector!.isConnected).toBe(false);
     });
@@ -143,11 +131,7 @@ describe('A-06: Edge Cases', () => {
         // When: Try to connect to unused port
         // Then: Connection should throw an error
         await expect(
-            connector!.connect(
-                'ws://localhost:59999/ws',  // Unlikely to be used
-                stageInfo!.stageId,
-                stageInfo!.stageType
-            )
+            connector!.connect('ws://localhost:59999/ws')  // Unlikely to be used
         ).rejects.toThrow();
         expect(connector!.isConnected).toBe(false);
     });
@@ -159,11 +143,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         await authenticate(connector!, 'empty-msgid-user');
 
@@ -187,11 +167,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         // When: Call disconnect multiple times
         connector!.disconnect();
@@ -211,11 +187,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         // Simulate disposal
         connector!.disconnect();
@@ -223,11 +195,7 @@ describe('A-06: Edge Cases', () => {
 
         // When & Then: Operations should fail gracefully
         try {
-            await connector!.connect(
-                testServer.wsUrl,
-                stageInfo!.stageId,
-                stageInfo!.stageType
-            );
+            await connector!.connect(testServer.wsUrl);
         } catch (error) {
             // May throw or fail silently
         }
@@ -244,11 +212,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         expect(connector!.isConnected).toBe(true);
 
@@ -260,7 +224,7 @@ describe('A-06: Edge Cases', () => {
         expect(connector!.isConnected).toBe(false);
     });
 
-    test('A-06-11: StageId and StageType are stored in connector', async () => {
+    test('A-06-11: StageId is zero before authentication', async () => {
         // Given: Connector
         createConnectorWithConfig({
             requestTimeoutMs: 5000,
@@ -268,14 +232,10 @@ describe('A-06: Edge Cases', () => {
         });
 
         // When: Connect
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
-        // Then: StageId should be stored (Connector doesn't track stageType)
-        expect(connector!.stageId).toBe(BigInt(stageInfo!.stageId));
+        // Then: StageId should remain zero before authentication
+        expect(connector!.stageId).toBe(0n);
     });
 
     test('A-06-12: Very long string can be echoed', async () => {
@@ -285,11 +245,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         await authenticate(connector!, 'long-string-user');
 
@@ -310,11 +266,7 @@ describe('A-06: Edge Cases', () => {
             heartbeatIntervalMs: 10000
         });
 
-        await connector!.connect(
-            testServer.wsUrl,
-            stageInfo!.stageId,
-            stageInfo!.stageType
-        );
+        await connector!.connect(testServer.wsUrl);
 
         await authenticate(connector!, 'special-char-user');
 

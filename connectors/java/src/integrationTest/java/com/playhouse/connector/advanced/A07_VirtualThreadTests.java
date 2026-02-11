@@ -36,7 +36,6 @@ class A07_VirtualThreadTests extends BaseIntegrationTest {
     void connectInVirtualThread_succeeds() throws Exception {
         // Given: Stage 생성
         stageInfo = testServer.createStage("TestStage");
-        connector.setStageId(stageInfo.getStageId());
 
         // When: Virtual Thread에서 동기 연결
         Thread.ofVirtual().start(() -> {
@@ -329,7 +328,6 @@ class A07_VirtualThreadTests extends BaseIntegrationTest {
             // 첫 번째 Connector 연결
             Thread thread1 = Thread.ofVirtual().start(() -> {
                 try {
-                    connector1.setStageId(stageInfo.getStageId());
                     connector1.connect(host, tcpPort);
 
                     AuthenticateRequest auth = new AuthenticateRequest("user1", "valid_token");
@@ -354,7 +352,6 @@ class A07_VirtualThreadTests extends BaseIntegrationTest {
             // 두 번째 Connector 연결 (동일 Stage, 다른 사용자)
             Thread thread2 = Thread.ofVirtual().start(() -> {
                 try {
-                    connector2.setStageId(stageInfo.getStageId());
                     connector2.connect(host, tcpPort);
 
                     AuthenticateRequest auth = new AuthenticateRequest("user2", "valid_token");

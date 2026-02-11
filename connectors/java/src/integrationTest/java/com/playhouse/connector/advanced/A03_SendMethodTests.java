@@ -182,7 +182,6 @@ class A03_SendMethodTests extends BaseIntegrationTest {
                 .build());
 
         var newStage = testServer.createTestStage();
-        newConnector.setStageId(newStage.getStageId());
         CompletableFuture<Void> connectFuture = newConnector.connectAsync(host, tcpPort);
         connectFuture.get(5, TimeUnit.SECONDS);
 

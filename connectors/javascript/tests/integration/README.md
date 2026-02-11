@@ -243,8 +243,8 @@ try {
     connector1.init();
     connector2.init();
 
-    await connector1.connect(wsUrl, stage1.stageId, stage1.stageType);
-    await connector2.connect(wsUrl, stage2.stageId, stage2.stageType);
+    await connector1.connect(wsUrl);
+    await connector2.connect(wsUrl);
 
     // Your tests here
 } finally {

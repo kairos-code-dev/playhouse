@@ -118,7 +118,7 @@ export class Connector {
      * @param url WebSocket URL (ws:// or wss://)
      * @returns true if connection succeeded
      */
-    async connect(url: string, _stageId?: bigint | number, _stageType?: string): Promise<boolean> {
+    async connect(url: string): Promise<boolean> {
         if (this._connection?.isConnected) {
             throw new Error('Already connected. Call disconnect() first.');
         }

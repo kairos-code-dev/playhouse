@@ -152,9 +152,6 @@ public class C07_HeartbeatTests extends BaseIntegrationTest {
             connector2.init(ConnectorConfig.defaultConfig());
             connector3.init(ConnectorConfig.defaultConfig());
 
-            connector1.setStageId(stage1.getStageId());
-            connector2.setStageId(stage2.getStageId());
-            connector3.setStageId(stage3.getStageId());
 
             connector1.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
             connector2.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);

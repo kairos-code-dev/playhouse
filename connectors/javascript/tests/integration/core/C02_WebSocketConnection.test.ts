@@ -31,17 +31,13 @@ describe('C-02: WebSocket Connection', () => {
         // When: Attempt WebSocket connection
         const wsUrl = testContext['testServer'].wsUrl;
         console.log('C-02-01: Connecting to:', wsUrl, 'with stageId:', stageInfo.stageId);
-        const connected = await testContext['connector']!.connect(
-            wsUrl,
-            stageInfo.stageId,
-            stageInfo.stageType
-        );
+        const connected = await testContext['connector']!.connect(wsUrl);
         console.log('C-02-01: Connect result:', connected);
 
         // Then: Connection should succeed
         expect(connected).toBe(true);
         expect(testContext['connector']!.isConnected).toBe(true);
-        expect(testContext['connector']!.stageId).toBe(BigInt(stageInfo.stageId));
+        expect(testContext['connector']!.stageId).toBe(0n);
         console.log('C-02-01: Test complete');
     });
 
@@ -78,7 +74,7 @@ describe('C-02: WebSocket Connection', () => {
 
         // When: Connect using callback-based method
         const wsUrl = testContext['testServer'].wsUrl;
-        testContext['connector']!.connect(wsUrl, stageInfo.stageId, stageInfo.stageType);
+        testContext['connector']!.connect(wsUrl);
 
         // Wait for OnConnect event (with mainThreadAction)
         const completed = await testContext['waitForConditionWithMainThread'](
@@ -98,11 +94,7 @@ describe('C-02: WebSocket Connection', () => {
 
         // When: Attempt connection with invalid stage ID
         const wsUrl = testContext['testServer'].wsUrl;
-        const connected = await testContext['connector']!.connect(
-            wsUrl,
-            invalidStageId,
-            'TestStage'
-        );
+        const connected = await testContext['connector']!.connect(wsUrl);
 
         // Then: TCP connection itself succeeds (stage ID validation happens later)
         // PlayHouse server accepts WebSocket connection first, then validates on auth/join
@@ -122,15 +114,11 @@ describe('C-02: WebSocket Connection', () => {
 
         const newStageInfo = await testContext['testServer'].createTestStage();
         const wsUrl = testContext['testServer'].wsUrl;
-        const reconnected = await testContext['connector']!.connect(
-            wsUrl,
-            newStageInfo.stageId,
-            newStageInfo.stageType
-        );
+        const reconnected = await testContext['connector']!.connect(wsUrl);
 
         // Then: Reconnection should succeed
         expect(reconnected).toBe(true);
         expect(testContext['connector']!.isConnected).toBe(true);
-        expect(testContext['connector']!.stageId).toBe(BigInt(newStageInfo.stageId));
+        expect(testContext['connector']!.stageId).toBe(0n);
     });
 });

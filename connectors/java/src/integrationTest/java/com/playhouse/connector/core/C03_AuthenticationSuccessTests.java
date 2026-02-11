@@ -154,9 +154,6 @@ public class C03_AuthenticationSuccessTests extends BaseIntegrationTest {
             connector3.init(ConnectorConfig.defaultConfig());
 
             // When: 3개의 Connector가 각각 연결 및 인증
-            connector1.setStageId(stage1.getStageId());
-            connector2.setStageId(stage2.getStageId());
-            connector3.setStageId(stage3.getStageId());
 
             connector1.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
             connector2.connectAsync(host, tcpPort).get(5, TimeUnit.SECONDS);
