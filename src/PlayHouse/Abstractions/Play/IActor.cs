@@ -11,15 +11,14 @@ namespace PlayHouse.Abstractions.Play;
 ///
 /// Join Sequence (in JoinStageCmd):
 /// 1. OnCreate() - Initialize actor state
-/// 2. OnAuthenticate() - Authenticate the client (MUST set ActorLink.AccountId)
-/// 3. OnCheckStage() - Resolve target Stage ID after authentication
-/// 4. OnPostAuthenticate() - Load user data from API server, etc.
+/// 2. OnAuthenticate() - Authenticate the client (MUST set ActorLink.AccountId and ActorLink.StageId)
+/// 3. OnPostAuthenticate() - Load user data from API server, etc.
 ///
 /// Cleanup:
 /// - OnDestroy() - Final cleanup when actor leaves stage
 ///
-/// IMPORTANT: ActorLink.AccountId MUST be set during OnAuthenticate().
-/// If it remains empty after authentication, the connection will be terminated.
+/// IMPORTANT: ActorLink.AccountId and ActorLink.StageId MUST be set during OnAuthenticate().
+/// If either value is invalid after authentication, the connection will be terminated.
 /// </remarks>
 public interface IActor
 {
@@ -62,8 +61,8 @@ public interface IActor
     /// - reply: Optional response packet to send back to client
     /// </returns>
     /// <remarks>
-    /// CRITICAL: You MUST set ActorLink.AccountId in this method upon successful authentication.
-    /// If AccountId remains empty ("") after this method returns true,
+    /// CRITICAL: You MUST set ActorLink.AccountId and ActorLink.StageId in this method
+    /// upon successful authentication. If AccountId remains empty ("") or StageId is not positive,
     /// the framework will throw an exception and terminate the connection.
     ///
     /// Example:
@@ -73,7 +72,7 @@ public interface IActor
     ///     var authReq = AuthRequest.Parser.ParseFrom(authPacket.Payload.DataSpan);
     ///     if (ValidateToken(authReq.Token))
     ///     {
-    ///         ActorLink.AccountId = authReq.UserId; // REQUIRED!
+    ///         ActorLink.SetAuthContext(authReq.UserId, 1001); // REQUIRED!
     ///         var reply = new AuthReply { Success = true };
     ///         return (true, CPacket.Of(reply));
     ///     }
@@ -82,19 +81,6 @@ public interface IActor
     /// </code>
     /// </remarks>
     Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket);
-
-    /// <summary>
-    /// Called after successful authentication to resolve the target Stage ID.
-    /// </summary>
-    /// <returns>
-    /// Stage ID to join. Must be greater than 0.
-    /// Returning 0 or negative value is treated as authentication failure.
-    /// </returns>
-    /// <remarks>
-    /// This callback is used when Stage assignment is managed by server-side logic
-    /// (for example querying an API server cache by AccountId).
-    /// </remarks>
-    Task<long> OnCheckStage();
 
     /// <summary>
     /// Called after successful authentication.

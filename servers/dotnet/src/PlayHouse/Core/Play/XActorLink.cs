@@ -33,6 +33,9 @@ internal sealed class XActorLink : IActorLink
     public string AccountId { get; set; } = string.Empty;
 
     /// <inheritdoc/>
+    public long StageId { get; set; }
+
+    /// <inheritdoc/>
     public ServerType ServerType => ActiveLink.ServerType;
 
     /// <inheritdoc/>
@@ -116,7 +119,7 @@ internal sealed class XActorLink : IActorLink
                 _transportSession.SendResponse(
                     packet.MsgId,
                     0,  // msgSeq = 0 for push messages
-                    _baseStage?.StageId ?? 0,
+                    StageId,
                     0,  // errorCode = 0
                     packet.Payload.DataSpan);
                 return;
@@ -131,6 +134,18 @@ internal sealed class XActorLink : IActorLink
         {
             StageLink.SendToClient(_sessionServerId, _sid, packet);
         }
+    }
+
+    /// <inheritdoc/>
+    public void SetAuthContext(string accountId, long stageId)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new ArgumentException("AccountId must not be empty.", nameof(accountId));
+        if (stageId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(stageId), "StageId must be greater than 0.");
+
+        AccountId = accountId;
+        StageId = stageId;
     }
 
     #endregion
@@ -266,6 +281,7 @@ internal sealed class XActorLink : IActorLink
     internal void BindStage(BaseStage baseStage)
     {
         _baseStage = baseStage;
+        StageId = baseStage.StageId;
     }
 
     #endregion

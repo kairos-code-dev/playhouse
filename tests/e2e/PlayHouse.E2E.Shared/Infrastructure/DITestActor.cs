@@ -49,9 +49,8 @@ public class DITestActor : IActor
 
     public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
     {
-        // 인증 시 AccountId 설정 (필수)
         var accountId = Interlocked.Increment(ref _accountIdCounter);
-        ActorLink.AccountId = accountId.ToString();
+        ActorLink.SetAuthContext(accountId.ToString(), accountId);
 
         // authPacket 파싱하여 E2E 검증 가능하도록 echo
         string receivedUserId = "";
@@ -81,8 +80,6 @@ public class DITestActor : IActor
 
         return Task.FromResult<(bool, IPacket?)>((true, ProtoCPacketExtensions.OfProto(reply)));
     }
-
-    public Task<long> OnCheckStage() => Task.FromResult(0L);
 
     public Task OnPostAuthenticate()
     {

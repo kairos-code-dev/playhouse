@@ -418,8 +418,7 @@ internal sealed class BaseStage(
             return (false, (ushort)ErrorCode.InvalidAccountId, null, null);
         }
 
-        var checkedStageId = await actor.OnCheckStage();
-        if (checkedStageId <= 0 || checkedStageId != StageId)
+        if (actorSender.StageId <= 0 || actorSender.StageId != StageId)
         {
             await actor.OnDestroy();
             actorScope?.Dispose();

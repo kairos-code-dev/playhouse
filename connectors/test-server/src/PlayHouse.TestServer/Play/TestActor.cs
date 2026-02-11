@@ -18,7 +18,6 @@ public class TestActor : IActor
 {
     private readonly ILogger<TestActor> _logger;
     private static long _accountIdCounter;
-    private string _userId = string.Empty;
 
     public IActorLink ActorLink { get; }
 
@@ -47,12 +46,15 @@ public class TestActor : IActor
         try
         {
             var authRequest = AuthenticateRequest.Parser.ParseFrom(packet.Payload.DataSpan);
-            _userId = authRequest.UserId;
 
-            // CRITICAL: AccountId 설정 (필수!)
-            // 자동 증가 카운터 사용 또는 UserId 사용 가능
             var accountId = Interlocked.Increment(ref _accountIdCounter);
-            ActorLink.AccountId = accountId.ToString();
+            if (!StageAssignmentStore.TryGet(authRequest.UserId, out var stageId))
+            {
+                _logger.LogWarning("No stage assignment found for user {UserId}", authRequest.UserId);
+                return Task.FromResult<(bool, IPacket?)>((false, null));
+            }
+
+            ActorLink.SetAuthContext(accountId.ToString(), stageId);
 
             _logger.LogInformation(
                 "Authenticating user: AccountId={AccountId}, UserId={UserId}, Token={Token}",
@@ -97,16 +99,6 @@ public class TestActor : IActor
             _logger.LogError(ex, "Authentication failed");
             return Task.FromResult<(bool, IPacket?)>((false, null));
         }
-    }
-
-    public Task<long> OnCheckStage()
-    {
-        if (StageAssignmentStore.TryGet(_userId, out var stageId))
-        {
-            return Task.FromResult(stageId);
-        }
-
-        return Task.FromResult(0L);
     }
 
     public Task OnPostAuthenticate()

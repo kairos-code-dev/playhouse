@@ -336,11 +336,12 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     private async Task HandleAuthenticationAsync(
         ITransportSession session,
         ushort msgSeq,
-        long clientStageId,
+        long stageId,
         IPayload payload)
     {
         try
         {
+            _ = stageId;
             if (_dispatcher == null || _systemLink == null)
             {
                 await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InternalError);
@@ -350,13 +351,13 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
 
             if (string.IsNullOrEmpty(_options.DefaultStageType))
             {
-                _logger.LogError("DefaultStageType is required for post-auth stage assignment flow.");
+                _logger.LogError("DefaultStageType is required when authenticating direct client sessions.");
                 await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InvalidStageType);
                 payload.Dispose();
                 return;
             }
 
-            var stageType = _options.DefaultStageType;
+            var actorFactoryStageType = _options.DefaultStageType;
 
             // 별도 Task에서 Actor 콜백 호출
             var (success, errorCode, targetStageId, actor, authReplyPacket) = await Task.Run(async () =>
@@ -364,7 +365,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                 try
                 {
                     // 인증 단계에서는 Stage 미바인딩 상태로 Actor를 생성하고,
-                    // OnCheckStage 이후 실제 Stage로 바인딩한다.
+                    // OnAuthenticate에서 전달된 StageId로 실제 Stage를 바인딩한다.
                     var actorLink = new XActorLink(_options.ServerId, session.SessionId, _options.ServerId, _systemLink, session);
 
                     // IActor 생성 with DI scope
@@ -372,12 +373,12 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                     IServiceScope? actorScope;
                     try
                     {
-                        (IActor iActor, actorScope) = _producer.GetActorWithScope(stageType, actorLink);
+                        (IActor iActor, actorScope) = _producer.GetActorWithScope(actorFactoryStageType, actorLink);
                         actor = new BaseActor(iActor, actorLink, actorScope);
                     }
                     catch (KeyNotFoundException)
                     {
-                        _logger.LogError("Actor factory not found for stage type: {StageType}", stageType);
+                        _logger.LogError("Actor factory not found for stage type: {StageType}", actorFactoryStageType);
                         return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
@@ -407,23 +408,19 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         return (false, (ushort)ErrorCode.InvalidAccountId, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    // 인증 후 Stage 할당 결정
-                    var resolvedStageId = await actor.Actor.OnCheckStage();
-                    if (resolvedStageId <= 0 && clientStageId > 0)
+                    if (actorLink.StageId <= 0)
                     {
-                        resolvedStageId = clientStageId;
-                    }
-                    if (resolvedStageId <= 0)
-                    {
-                        _logger.LogWarning("OnCheckStage returned invalid stageId {StageId} for session {SessionId}",
-                            resolvedStageId, session.SessionId);
+                        _logger.LogWarning("StageId not set after authentication for session {SessionId}", session.SessionId);
                         await actor.Actor.OnDestroy();
                         actor.Dispose();
                         authReply?.Dispose();
                         return (false, (ushort)ErrorCode.StageNotFound, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
+                    var resolvedStageId = actorLink.StageId;
+                    var stageType = actorFactoryStageType;
                     var baseStage = _dispatcher.GetOrCreateStage(resolvedStageId, stageType);
+
                     if (baseStage == null)
                     {
                         _logger.LogError("Failed to get or create stage {StageId} after auth", resolvedStageId);

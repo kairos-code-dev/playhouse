@@ -45,9 +45,8 @@ public class TestActorImpl : IActor
 
     public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
     {
-        // 인증 시 AccountId 설정 (필수)
         var accountId = Interlocked.Increment(ref _accountIdCounter);
-        ActorLink.AccountId = accountId.ToString();
+        ActorLink.SetAuthContext(accountId.ToString(), accountId);
 
         _logger.LogInformation("OnAuthenticate called for AccountId={AccountId}", ActorLink.AccountId);
 
@@ -79,8 +78,6 @@ public class TestActorImpl : IActor
 
         return Task.FromResult<(bool, IPacket?)>((true, ProtoCPacketExtensions.OfProto(reply)));
     }
-
-    public Task<long> OnCheckStage() => Task.FromResult(0L);
 
     public Task OnPostAuthenticate()
     {
