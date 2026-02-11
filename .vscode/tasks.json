@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Solution",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "PlayHouse.sln", "--configuration", "Release"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Run Unit Tests",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "tests/unit/PlayHouse.Unit/PlayHouse.Unit.csproj", "--configuration", "Release"],
+      "group": "test",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Run E2E Tests",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "tests/e2e/PlayHouse.E2E/PlayHouse.E2E.csproj", "--configuration", "Release"],
+      "group": "test",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build JS Connector",
+      "type": "shell",
+      "command": "npm run build",
+      "options": { "cwd": "${workspaceFolder}/connectors/javascript" },
+      "group": "build",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "Build C++ Connector",
+      "type": "shell",
+      "command": "cmake --build build",
+      "options": { "cwd": "${workspaceFolder}/connectors/cpp" },
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Build Java Connector",
+      "type": "shell",
+      "command": "./gradlew build",
+      "options": { "cwd": "${workspaceFolder}/connectors/java" },
+      "group": "build",
+      "problemMatcher": "$gradle"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "ms-dotnettools.csdevkit",
+    "ms-vscode.cpptools",
+    "vscjava.vscode-java-pack",
+    "drblury.protobuf-vsc",
+    "editorconfig.editorconfig"
+  ]
+}

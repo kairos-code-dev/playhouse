@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\PlayHouse\PlayHouse.csproj" />
-    <ProjectReference Include="..\..\..\connector\PlayHouse.Connector\PlayHouse.Connector.csproj" />
+    <ProjectReference Include="..\..\..\connectors\csharp\src\PlayHouse.Connector\PlayHouse.Connector.csproj" />
     <ProjectReference Include="..\..\..\extensions\PlayHouse.Extensions.Proto\PlayHouse.Extensions.Proto.csproj" />
   </ItemGroup>
 

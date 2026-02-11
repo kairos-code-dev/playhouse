@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\PlayHouse\PlayHouse.csproj" />
-    <ProjectReference Include="..\..\..\connector\PlayHouse.Connector\PlayHouse.Connector.csproj" />
+    <ProjectReference Include="..\..\..\connectors\csharp\src\PlayHouse.Connector\PlayHouse.Connector.csproj" />
     <ProjectReference Include="..\..\..\extensions\PlayHouse.Extensions.Proto\PlayHouse.Extensions.Proto.csproj" />
     <ProjectReference Include="..\..\..\extensions\PlayHouse.Extensions.Json\PlayHouse.Extensions.Json.csproj" />
     <ProjectReference Include="..\..\..\extensions\PlayHouse.Extensions.MessagePack\PlayHouse.Extensions.MessagePack.csproj" />

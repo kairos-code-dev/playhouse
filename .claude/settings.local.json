@@ -4,7 +4,8 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\ndocs: 스펙 문서 구조화 및 테스트 전략 추가\n\n- 01-architecture.md: Clean Architecture 기반 레이어 구조 상세화\n- 08-metrics-observability.md: 테스트 전략 섹션 추가\n- 09-connector.md: 테스트 전략 섹션 구조화 (E2E/통합/유닛)\n- 11-event-loop-messaging.md: 이벤트 루프 메시징 스펙 추가\n- 10-testing-spec.md: 테스트 스펙 문서 추가\n- 99-playhouse-reference.md: PlayHouse 레퍼런스 문서 추가\n- architecture-guide.md: 아키텍처 가이드라인 문서 추가\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(code --install-extension:*)"
     ],
     "deny": [],
     "ask": []

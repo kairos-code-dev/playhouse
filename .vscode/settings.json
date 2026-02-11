@@ -1,0 +1,33 @@
+{
+  "dotnet.defaultSolution": "PlayHouse.sln",
+
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/connectors/cpp/build/compile_commands.json",
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/connectors/cpp/include",
+    "${workspaceFolder}/connectors/cpp/third_party/boost",
+    "${workspaceFolder}/connectors/cpp/third_party/asio/include"
+  ],
+  "cmake.sourceDirectory": "${workspaceFolder}/connectors/cpp",
+  "cmake.buildDirectory": "${workspaceFolder}/connectors/cpp/build",
+
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.gradle.home": "${workspaceFolder}/connectors/java",
+
+  "typescript.tsdk": "connectors/javascript/node_modules/typescript/lib",
+
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/node_modules": true,
+    "**/.gradle": true,
+    "**/build": false
+  },
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/node_modules": true,
+    "**/.gradle": true,
+    "**/dist": true
+  }
+}
