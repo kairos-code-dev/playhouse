@@ -89,7 +89,7 @@ public class GameActor : IActor
 
 ### 2. OnAuthenticate - 클라이언트 인증 (중요!)
 
-**가장 중요한 메서드입니다!** 클라이언트의 신원을 확인하고 `AccountId`를 설정해야 합니다.
+**가장 중요한 메서드입니다!** 클라이언트의 신원을 확인하고 `AccountId`와 `StageId`를 함께 설정해야 합니다.
 
 ```csharp
 public async Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
@@ -113,9 +113,9 @@ public async Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPack
             return (false, CPacket.Of(errorReply));
         }
 
-        // ⚠️ 필수: AccountId 설정
-        // AccountId를 설정하지 않으면 연결이 종료됩니다!
-        ActorLink.AccountId = authRequest.UserId;
+        // ⚠️ 필수: AccountId + StageId 설정
+        // 둘 중 하나라도 누락되면 연결이 종료됩니다.
+        ActorLink.SetAuthContext(authRequest.UserId, 1001L);
 
         // 인증 성공 응답
         var reply = new AuthReply
@@ -148,7 +148,8 @@ private async Task<bool> ValidateToken(string token)
 
 **중요 사항:**
 - **`ActorLink.AccountId`를 반드시 설정해야 합니다!**
-- `AccountId`가 비어있으면 프레임워크가 예외를 발생시키고 연결을 종료합니다
+- **`ActorLink.StageId`도 반드시 양수로 설정해야 합니다!**
+- AccountId/StageId가 유효하지 않으면 프레임워크가 연결을 종료합니다
 - `OnAuthenticate`가 `(false, reply)`를 반환하면 인증 실패로 간주됩니다
 - `(true, reply)`를 반환하면 `OnPostAuthenticate`가 호출됩니다
 
@@ -260,8 +261,8 @@ public async Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPack
             }));
         }
 
-        // AccountId 설정 (필수!)
-        ActorLink.AccountId = userId;
+        // AccountId + StageId 설정 (필수!)
+        ActorLink.SetAuthContext(userId, 1001L);
 
         return (true, CPacket.Of(new AuthReply
         {
@@ -313,8 +314,8 @@ public async Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPack
         }));
     }
 
-    // AccountId 설정 (필수!)
-    ActorLink.AccountId = authResult.UserId;
+    // AccountId + StageId 설정 (필수!)
+    ActorLink.SetAuthContext(authResult.UserId, 1001L);
 
     return (true, CPacket.Of(new AuthReply
     {
@@ -343,8 +344,8 @@ public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
         })));
     }
 
-    // AccountId 설정 (필수!)
-    ActorLink.AccountId = authRequest.UserId;
+    // AccountId + StageId 설정 (필수!)
+    ActorLink.SetAuthContext(authRequest.UserId, 1001L);
 
     return Task.FromResult<(bool, IPacket?)>((true, CPacket.Of(new AuthReply
     {
@@ -408,8 +409,8 @@ public class GameActor : IActor
                 }));
             }
 
-            // ⚠️ 필수: AccountId 설정
-            ActorLink.AccountId = authRequest.UserId;
+            // ⚠️ 필수: AccountId + StageId 설정
+            ActorLink.SetAuthContext(authRequest.UserId, 1001L);
 
             _logger.LogInformation("Authentication succeeded for AccountId: {AccountId}", ActorLink.AccountId);
 

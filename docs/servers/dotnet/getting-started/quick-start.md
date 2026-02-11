@@ -148,9 +148,10 @@ public class MyActor : IActor
     // 인증 처리 (필수!)
     public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
     {
-        // ⚠️ 중요: AccountId를 반드시 설정해야 함
+        // ⚠️ 중요: AccountId + StageId를 반드시 함께 설정해야 함
         var accountId = Guid.NewGuid().ToString();
-        ActorLink.AccountId = accountId;
+        var stageId = 1L;
+        ActorLink.SetAuthContext(accountId, stageId);
 
         Console.WriteLine($"Actor authenticated: {accountId}");
 
@@ -260,8 +261,7 @@ connector.Init(new ConnectorConfig
 });
 
 // 연결
-var stageId = 1L;
-var connected = await connector.ConnectAsync("127.0.0.1", 12000, stageId, "MyStage");
+var connected = await connector.ConnectAsync("127.0.0.1", 12000);
 if (!connected)
 {
     Console.WriteLine("Connection failed");
@@ -288,8 +288,8 @@ await connector.DisposeAsync();
 ### 클라이언트 실행 흐름
 
 ```
-1. Connect    → Stage 생성/접속
-2. Authenticate → Actor 생성 및 인증
+1. Connect    → 서버 연결
+2. Authenticate → Actor 생성, 인증, Stage 할당
 3. Request/Send → 메시지 송수신
 4. Disconnect → 연결 종료
 ```
@@ -303,7 +303,7 @@ await connector.DisposeAsync();
 
 ### Actor
 - 개별 클라이언트(플레이어)를 나타냄
-- AccountId로 식별 (인증 시 설정 필수)
+- AccountId와 StageId로 바인딩 (인증 시 설정 필수)
 - Stage에 속해야 메시지 송수신 가능
 
 ### 생명주기
@@ -331,16 +331,16 @@ Disconnect → Actor.OnDestroy
 
 ## 문제 해결
 
-### "AccountId must not be empty after authentication"
+### "AccountId/StageId is invalid after authentication"
 
-**원인:** `OnAuthenticate`에서 `ActorLink.AccountId`를 설정하지 않음
+**원인:** `OnAuthenticate`에서 `ActorLink.SetAuthContext(accountId, stageId)`를 호출하지 않음
 
 **해결:**
 ```csharp
 public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
 {
-    // ✅ AccountId 설정 필수!
-    ActorLink.AccountId = "user-123";
+    // ✅ AccountId + StageId 설정 필수!
+    ActorLink.SetAuthContext("user-123", 1001L);
 
     return Task.FromResult<(bool, IPacket?)>((true, Packet.Empty("AuthReply")));
 }

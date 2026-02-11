@@ -118,16 +118,16 @@ var server = new PlayServerBootstrap()
 
 ## 인증 문제
 
-### "AccountId must not be empty after authentication"
+### "AccountId/StageId is invalid after authentication"
 
 **증상:**
 ```
-InvalidOperationException: AccountId must not be empty after authentication
+InvalidOperationException: AccountId/StageId must be valid after authentication
 클라이언트 연결이 즉시 끊김
 ```
 
 **원인:**
-`OnAuthenticate`에서 `ActorLink.AccountId`를 설정하지 않음
+`OnAuthenticate`에서 `ActorLink.SetAuthContext(accountId, stageId)`를 호출하지 않음
 
 **해결 방법:**
 
@@ -140,11 +140,11 @@ public class GameActor : IActor
     {
         var authRequest = AuthenticateRequest.Parser.ParseFrom(authPacket.Payload.DataSpan);
 
-        // ❌ 잘못된 코드 - AccountId 설정 안 함
+        // ❌ 잘못된 코드 - 인증 컨텍스트 설정 안 함
         // return Task.FromResult<(bool, IPacket?)>((true, null));
 
-        // ✅ 올바른 코드 - AccountId 설정 필수!
-        ActorLink.AccountId = authRequest.UserId;
+        // ✅ 올바른 코드 - AccountId + StageId 설정 필수!
+        ActorLink.SetAuthContext(authRequest.UserId, 1001L);
 
         var reply = new AuthenticateReply { Success = true };
         return Task.FromResult<(bool, IPacket?)>((true, CPacket.Of(reply)));
@@ -197,8 +197,8 @@ public async Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPack
         }));
     }
 
-    // ✅ 성공 시 AccountId 설정
-    ActorLink.AccountId = authRequest.UserId;
+    // ✅ 성공 시 AccountId + StageId 설정
+    ActorLink.SetAuthContext(authRequest.UserId, 1001L);
     return (true, CPacket.Of(new AuthenticateReply { Success = true }));
 }
 ```
@@ -1300,9 +1300,9 @@ Console.WriteLine($"[Recv] {response.MsgId}");
 
 ## FAQ
 
-**Q: "AccountId must not be empty" 에러가 계속 발생해요**
+**Q: "AccountId/StageId is invalid" 에러가 계속 발생해요**
 
-A: `OnAuthenticate`에서 `ActorLink.AccountId = "user-id"`를 반드시 설정해야 합니다. 이 설정이 누락되면 연결이 즉시 종료됩니다.
+A: `OnAuthenticate`에서 `ActorLink.SetAuthContext("user-id", 1001L)`를 반드시 호출해야 합니다. 이 설정이 누락되면 연결이 즉시 종료됩니다.
 
 **Q: Reply를 호출했는데 클라이언트가 타임아웃이 발생해요**
 

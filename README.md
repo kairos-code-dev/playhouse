@@ -119,7 +119,7 @@ public class Player : IActor
     public Task<(bool, IPacket?)> OnAuthenticate(IPacket authPacket)
     {
         var req = AuthRequest.Parser.ParseFrom(authPacket.Payload.DataSpan);
-        ActorSender.AccountId = req.UserId;
+        ActorSender.SetAuthContext(req.UserId, 1001L);
 
         return Task.FromResult<(bool, IPacket?)>((true, CPacket.Of(new AuthResponse { Success = true })));
     }

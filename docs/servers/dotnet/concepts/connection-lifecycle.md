@@ -228,8 +228,8 @@ public class GameActor : IActor
             }));
         }
 
-        // AccountId 설정
-        ActorLink.AccountId = apiResponse.UserId;
+        // AccountId + StageId 설정
+        ActorLink.SetAuthContext(apiResponse.UserId, apiResponse.StageId);
 
         return (true, CPacket.Of(new AuthenticateReply
         {
@@ -405,7 +405,7 @@ public async Task<bool> ReconnectAsync(int maxRetries = 3)
     {
         Console.WriteLine($"재연결 시도 {i + 1}/{maxRetries}...");
 
-        var result = await connector.ConnectAsync("127.0.0.1", 12000, stageId, stageType);
+        var result = await connector.ConnectAsync("127.0.0.1", 12000);
         if (result)
         {
             // 재인증
@@ -440,17 +440,18 @@ var gameConnector = new PlayHouse.Connector.Connector();
 gameConnector.Init(new ConnectorConfig());
 
 // 로비 연결
-await lobbyConnector.ConnectAsync("127.0.0.1", 12000, 1L, "Lobby");
+await lobbyConnector.ConnectAsync("127.0.0.1", 12000);
 await lobbyConnector.AuthenticateAsync(authPacket1);
 
 // 게임 룸 연결
-await gameConnector.ConnectAsync("127.0.0.1", 12000, 100L, "GameRoom");
+await gameConnector.ConnectAsync("127.0.0.1", 12000);
 await gameConnector.AuthenticateAsync(authPacket2);
 ```
 
 ### Stage가 없으면 생성
 
-클라이언트가 Connect할 때 해당 StageId의 Stage가 없으면 자동으로 생성됩니다.
+클라이언트는 Connect 단계에서 StageId를 보내지 않습니다.
+Stage 할당/선택은 OnAuthenticate 단계에서 ActorLink.SetAuthContext(accountId, stageId)로 결정됩니다.
 
 ```csharp
 // 서버: Stage.OnCreate 구현
@@ -514,16 +515,16 @@ var server = new PlayServerBootstrap()
 
 ## 문제 해결
 
-### "AccountId must not be empty after authentication"
+### "AccountId/StageId is invalid after authentication"
 
-**원인:** `OnAuthenticate`에서 `ActorLink.AccountId`를 설정하지 않음
+**원인:** `OnAuthenticate`에서 `ActorLink.SetAuthContext(accountId, stageId)`를 호출하지 않음
 
 **해결:**
 ```csharp
 public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
 {
-    // ✅ AccountId 설정 필수!
-    ActorLink.AccountId = "user-123";
+    // ✅ AccountId + StageId 설정 필수!
+    ActorLink.SetAuthContext("user-123", 1001L);
 
     return Task.FromResult<(bool, IPacket?)>((true, null));
 }
