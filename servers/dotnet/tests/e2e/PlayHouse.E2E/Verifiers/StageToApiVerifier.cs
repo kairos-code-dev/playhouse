@@ -252,7 +252,7 @@ public class StageToApiVerifier : VerifierBase
     private async Task ConnectAndAuthenticateAsync(long stageId)
     {
         Connector.Init(new ConnectorConfig { RequestTimeoutMs = 30000 });
-        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, $"Should connect to server (stageId: {stageId})");
         await Task.Delay(100);
 

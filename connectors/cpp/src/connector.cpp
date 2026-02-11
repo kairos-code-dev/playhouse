@@ -91,6 +91,7 @@ std::future<bool> Connector::ConnectAsync(const std::string& host, uint16_t port
 
 void Connector::Disconnect() {
     if (impl_->initialized_) {
+        impl_->stage_id_ = 0;
         impl_->network_->Disconnect();
     }
 }
@@ -163,8 +164,12 @@ asio::awaitable<bool> Connector::Authenticate(Packet authPacket) {
         throw std::runtime_error("Not connected");
     }
 
-    Packet response = co_await impl_->network_->Authenticate(std::move(authPacket), impl_->stage_id_);
-    co_return (response.GetErrorCode() == 0);
+    Packet response = co_await impl_->network_->Authenticate(std::move(authPacket), 0);
+    const bool success = (response.GetErrorCode() == 0);
+    if (success) {
+        impl_->stage_id_ = response.GetStageId();
+    }
+    co_return success;
 }
 
 // Callback overload version
@@ -180,11 +185,14 @@ void Connector::Authenticate(Packet authPacket, std::function<void(bool)> callba
 
     impl_->network_->Authenticate(
         std::move(authPacket),
-        [callback](Packet response) {
+        [this, callback](Packet response) {
             bool success = (response.GetErrorCode() == 0);
+            if (success) {
+                impl_->stage_id_ = response.GetStageId();
+            }
             callback(success);
         },
-        impl_->stage_id_
+        0
     );
 }
 
@@ -218,11 +226,14 @@ std::future<bool> Connector::AuthenticateAsync(
 
     impl_->network_->Authenticate(
         std::move(auth_packet),
-        [promise](Packet response) {
+        [this, promise](Packet response) {
             bool success = (response.GetErrorCode() == 0);
+            if (success) {
+                impl_->stage_id_ = response.GetStageId();
+            }
             promise->set_value(success);
         },
-        impl_->stage_id_
+        0
     );
 
     return future;

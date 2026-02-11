@@ -62,7 +62,7 @@ public class ConnectionOnlyTest(
         try
         {
             // 연결
-            var connected = await connector.ConnectAsync(serverHost, serverPort, stageId, "BenchStage");
+            var connected = await connector.ConnectAsync(serverHost, serverPort);
             if (!connected)
             {
                 Interlocked.Increment(ref _failedConnectCount);

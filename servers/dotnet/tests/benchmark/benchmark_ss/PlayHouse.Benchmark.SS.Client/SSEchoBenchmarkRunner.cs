@@ -141,7 +141,7 @@ public class SSEchoBenchmarkRunner(
         connector.Init(new ConnectorConfig { RequestTimeoutMs = 30000 });
 
         var stageId = 1000 + id;
-        if (!await connector.ConnectAsync(serverHost, serverPort, stageId, "BenchmarkStage"))
+        if (!await connector.ConnectAsync(serverHost, serverPort))
         {
             return null;
         }

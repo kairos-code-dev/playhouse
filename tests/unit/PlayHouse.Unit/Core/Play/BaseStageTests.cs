@@ -89,6 +89,7 @@ public class BaseStageTests
             return Task.CompletedTask;
         }
         public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket) => Task.FromResult<(bool, IPacket?)>((true, null));
+        public Task<long> OnCheckStage() => Task.FromResult(0L);
         public Task OnPostAuthenticate() => Task.CompletedTask;
     }
 

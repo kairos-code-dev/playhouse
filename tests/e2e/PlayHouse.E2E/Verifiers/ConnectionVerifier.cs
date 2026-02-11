@@ -70,7 +70,7 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         var stageId = GenerateUniqueStageId();
 
         // When
-        var result = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var result = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         await Task.Delay(200);
 
         // Consume callbacks
@@ -97,7 +97,7 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         var stageId = GenerateUniqueStageId();
 
         // When - 존재하지 않는 포트로 연결 시도
-        var result = await Connector.ConnectAsync("127.0.0.1", 59999, stageId, "TestStage");
+        var result = await Connector.ConnectAsync("127.0.0.1", 59999);
         await Task.Delay(200);
 
         // Consume callbacks
@@ -119,7 +119,7 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         var stageId = GenerateUniqueStageId();
 
         // When
-        var result = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var result = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         await Task.Delay(100);
 
         // Then
@@ -137,7 +137,7 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         var stageId = GenerateUniqueStageId();
 
         // When
-        var result = await Connector.ConnectAsync("127.0.0.1", 59999, stageId, "TestStage");
+        var result = await Connector.ConnectAsync("127.0.0.1", 59999);
 
         // Then
         Assert.IsFalse(result, "await ConnectAsync() should return false");
@@ -256,7 +256,7 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
     private async Task ConnectOnlyAsync()
     {
         var stageId = GenerateUniqueStageId();
-        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, "Should connect to server");
         await Task.Delay(100);
     }

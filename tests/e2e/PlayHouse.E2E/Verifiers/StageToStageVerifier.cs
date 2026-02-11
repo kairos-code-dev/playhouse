@@ -272,7 +272,7 @@ public class StageToStageVerifier : VerifierBase
     private async Task ConnectAndAuthenticateAsync(PlayHouse.Connector.Connector connector, long stageId)
     {
         connector.Init(new ConnectorConfig { RequestTimeoutMs = 30000 });
-        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, $"Should connect to server (stageId: {stageId})");
         await Task.Delay(100);
 

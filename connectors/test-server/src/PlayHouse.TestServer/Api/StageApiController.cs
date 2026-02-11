@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PlayHouse.Abstractions.Api;
 using PlayHouse.Core.Shared;
 using PlayHouse.Extensions.Proto;
+using PlayHouse.TestServer.Shared;
 
 namespace PlayHouse.TestServer.Api;
 
@@ -88,6 +89,11 @@ public class StageApiController : ControllerBase
                 request.StageId,
                 replyPayloadId);
 
+            if (result.Result)
+            {
+                StageAssignmentStore.MarkStageCreated(request.StageId);
+            }
+
             return Ok(new CreateStageResponse
             {
                 Success = result.Result,
@@ -158,6 +164,16 @@ public class StageApiController : ControllerBase
             _logger.LogError(ex, "Error getting or creating stage");
             return StatusCode(500, new { error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Assigns a user to a stage for post-authentication stage lookup.
+    /// </summary>
+    [HttpPost("stage-assignments")]
+    public IActionResult AssignStage([FromBody] AssignStageRequest request)
+    {
+        StageAssignmentStore.Assign(request.UserId, request.StageId);
+        return Ok(new { success = true, request.UserId, request.StageId });
     }
 }
 
@@ -238,4 +254,10 @@ public record GetOrCreateStageResponse
     /// OnCreate reply payload info (format: "StageName:MaxPlayers", only when IsCreated=true)
     /// </summary>
     public string? ReplyPayloadId { get; init; }
+}
+
+public record AssignStageRequest
+{
+    public required string UserId { get; init; }
+    public required long StageId { get; init; }
 }

@@ -86,6 +86,11 @@ public abstract class BaseIntegrationTest : IClassFixture<TestServerFixture>, IA
     /// <returns>인증 응답</returns>
     protected async Task<AuthenticateReply> AuthenticateAsync(string userId, string token = "valid_token")
     {
+        if (StageInfo != null)
+        {
+            await TestServer.AssignStageAsync(userId, StageInfo.StageId);
+        }
+
         var authRequest = new AuthenticateRequest
         {
             UserId = userId,

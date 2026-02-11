@@ -159,7 +159,7 @@ public class C08_DisconnectionTests : BaseIntegrationTest
         tempConnector.Init(new ConnectorConfig());
 
         var stageInfo = await TestServer.CreateTestStageAsync();
-        await tempConnector.ConnectAsync(TestServer.Host, TestServer.TcpPort, stageInfo.StageId, stageInfo.StageType);
+        await tempConnector.ConnectAsync(TestServer.Host, TestServer.TcpPort);
 
         var authRequest = new PlayHouse.TestServer.Proto.AuthenticateRequest
         {

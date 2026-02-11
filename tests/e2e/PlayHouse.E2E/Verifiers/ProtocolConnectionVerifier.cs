@@ -52,7 +52,7 @@ public class ProtocolConnectionVerifier(ServerContext serverContext) : VerifierB
         try
         {
             // When
-            var result = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+            var result = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
 
             // Then
             Assert.IsTrue(result, "TCP ConnectAsync should return true");
@@ -70,7 +70,7 @@ public class ProtocolConnectionVerifier(ServerContext serverContext) : VerifierB
         // Given
         var connector = CreateTcpConnector();
         var stageId = GenerateUniqueStageId();
-        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, "Should connect via TCP");
 
         try
@@ -103,7 +103,7 @@ public class ProtocolConnectionVerifier(ServerContext serverContext) : VerifierB
         try
         {
             // When
-            var result = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpTlsPort, stageId, "TestStage");
+            var result = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpTlsPort);
 
             // Then
             Assert.IsTrue(result, "TCP+TLS ConnectAsync should return true");
@@ -121,7 +121,7 @@ public class ProtocolConnectionVerifier(ServerContext serverContext) : VerifierB
         // Given
         var connector = CreateTcpTlsConnector();
         var stageId = GenerateUniqueStageId();
-        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpTlsPort, stageId, "TestStage");
+        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpTlsPort);
         Assert.IsTrue(connected, "Should connect via TCP+TLS");
 
         try
@@ -154,7 +154,7 @@ public class ProtocolConnectionVerifier(ServerContext serverContext) : VerifierB
         try
         {
             // When
-            var result = await connector.ConnectAsync("127.0.0.1", ServerContext.WebSocketPort, stageId, "TestStage");
+            var result = await connector.ConnectAsync("127.0.0.1", ServerContext.WebSocketPort);
 
             // Then
             Assert.IsTrue(result, "WebSocket ConnectAsync should return true");
@@ -172,7 +172,7 @@ public class ProtocolConnectionVerifier(ServerContext serverContext) : VerifierB
         // Given
         var connector = CreateWebSocketConnector();
         var stageId = GenerateUniqueStageId();
-        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.WebSocketPort, stageId, "TestStage");
+        var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.WebSocketPort);
         Assert.IsTrue(connected, "Should connect via WebSocket");
 
         try

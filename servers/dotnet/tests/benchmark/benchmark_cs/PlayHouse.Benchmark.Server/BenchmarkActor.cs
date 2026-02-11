@@ -43,6 +43,8 @@ public class BenchmarkActor : IActor
         return Task.FromResult<(bool, IPacket?)>((true, null));
     }
 
+    public Task<long> OnCheckStage() => Task.FromResult(0L);
+
     public Task OnPostAuthenticate()
     {
         return Task.CompletedTask;

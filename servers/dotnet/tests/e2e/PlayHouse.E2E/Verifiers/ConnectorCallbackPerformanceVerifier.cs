@@ -56,7 +56,7 @@ public class ConnectorCallbackPerformanceVerifier : VerifierBase
         try
         {
             var stageId = GenerateUniqueStageId();
-            var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+            var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
             Assert.IsTrue(connected, "Should connect to server");
             await Task.Delay(100);
 
@@ -154,7 +154,7 @@ public class ConnectorCallbackPerformanceVerifier : VerifierBase
         try
         {
             var stageId = GenerateUniqueStageId();
-            var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+            var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
             Assert.IsTrue(connected, "Should connect to server");
             await Task.Delay(100);
 

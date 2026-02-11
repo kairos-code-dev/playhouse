@@ -337,7 +337,7 @@ public class BenchmarkRunner(
         var stageId = 1000 + stageIdOffset + connectionId; // 각 연결마다 고유 StageId
 
         // 연결
-        var connected = await connector.ConnectAsync(serverHost, serverPort, stageId, stageName);
+        var connected = await connector.ConnectAsync(serverHost, serverPort);
         if (!connected)
         {
             Interlocked.Increment(ref _failedCount);

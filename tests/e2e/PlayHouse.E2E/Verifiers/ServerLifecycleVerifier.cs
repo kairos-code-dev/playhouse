@@ -44,7 +44,7 @@ public class ServerLifecycleVerifier : VerifierBase
         var tempPort = tempServer.ActualTcpPort;
 
         var stageId = GenerateUniqueStageId();
-        var connected = await tempConnector.ConnectAsync("127.0.0.1", tempPort, stageId, "TestStage");
+        var connected = await tempConnector.ConnectAsync("127.0.0.1", tempPort);
         Assert.IsTrue(connected, "Should connect to temporary server");
         await Task.Delay(500);
 

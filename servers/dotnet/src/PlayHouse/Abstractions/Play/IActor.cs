@@ -12,7 +12,8 @@ namespace PlayHouse.Abstractions.Play;
 /// Join Sequence (in JoinStageCmd):
 /// 1. OnCreate() - Initialize actor state
 /// 2. OnAuthenticate() - Authenticate the client (MUST set ActorLink.AccountId)
-/// 3. OnPostAuthenticate() - Load user data from API server, etc.
+/// 3. OnCheckStage() - Resolve target Stage ID after authentication
+/// 4. OnPostAuthenticate() - Load user data from API server, etc.
 ///
 /// Cleanup:
 /// - OnDestroy() - Final cleanup when actor leaves stage
@@ -81,6 +82,19 @@ public interface IActor
     /// </code>
     /// </remarks>
     Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket);
+
+    /// <summary>
+    /// Called after successful authentication to resolve the target Stage ID.
+    /// </summary>
+    /// <returns>
+    /// Stage ID to join. Must be greater than 0.
+    /// Returning 0 or negative value is treated as authentication failure.
+    /// </returns>
+    /// <remarks>
+    /// This callback is used when Stage assignment is managed by server-side logic
+    /// (for example querying an API server cache by AccountId).
+    /// </remarks>
+    Task<long> OnCheckStage();
 
     /// <summary>
     /// Called after successful authentication.

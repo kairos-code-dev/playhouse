@@ -13,7 +13,7 @@ namespace PlayHouse.Connector;
 /// </summary>
 /// <remarks>
 /// 클라이언트가 Play Server에 연결하여 실시간 통신을 수행하는 메인 클래스입니다.
-/// Connect() 호출 시 지정한 stageId가 모든 Send/Request에서 사용됩니다.
+/// Stage ID는 인증 성공 후 서버 응답에서 자동으로 설정됩니다.
 /// </remarks>
 public sealed class Connector : IConnectorCallback, IAsyncDisposable
 {
@@ -111,10 +111,8 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
     /// </summary>
     /// <param name="host">서버 호스트 주소</param>
     /// <param name="port">서버 포트</param>
-    /// <param name="stageId">Stage ID (모든 Send/Request에서 사용)</param>
-    /// <param name="stageType">Stage 타입</param>
     /// <param name="debugMode">디버그 모드</param>
-    public void Connect(string host, int port, long stageId, string stageType, bool debugMode = false)
+    public void Connect(string host, int port, bool debugMode = false)
     {
         if (_clientNetwork == null)
         {
@@ -122,9 +120,18 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
         }
 
         _disconnectFromClient = false;
-        _stageId = stageId;
-        _stageType = stageType;
+        _stageId = 0;
+        _stageType = string.Empty;
         _clientNetwork.Connect(host, port, debugMode);
+    }
+
+    /// <summary>
+    /// Legacy overload. stageId is ignored because stage assignment is resolved after authentication.
+    /// </summary>
+    public void Connect(string host, int port, long stageId, string stageType, bool debugMode = false)
+    {
+        _stageType = stageType ?? string.Empty;
+        Connect(host, port, debugMode);
     }
 
     /// <summary>
@@ -132,11 +139,9 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
     /// </summary>
     /// <param name="host">서버 호스트 주소</param>
     /// <param name="port">서버 포트</param>
-    /// <param name="stageId">Stage ID (모든 Send/Request에서 사용)</param>
-    /// <param name="stageType">Stage 타입</param>
     /// <param name="debugMode">디버그 모드</param>
     /// <returns>연결 성공 여부</returns>
-    public async Task<bool> ConnectAsync(string host, int port, long stageId, string stageType, bool debugMode = false)
+    public async Task<bool> ConnectAsync(string host, int port, bool debugMode = false)
     {
         if (_clientNetwork == null)
         {
@@ -144,9 +149,18 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
         }
 
         _disconnectFromClient = false;
-        _stageId = stageId;
-        _stageType = stageType;
+        _stageId = 0;
+        _stageType = string.Empty;
         return await _clientNetwork.ConnectAsync(host, port, debugMode);
+    }
+
+    /// <summary>
+    /// Legacy overload. stageId is ignored because stage assignment is resolved after authentication.
+    /// </summary>
+    public async Task<bool> ConnectAsync(string host, int port, long stageId, string stageType, bool debugMode = false)
+    {
+        _stageType = stageType ?? string.Empty;
+        return await ConnectAsync(host, port, debugMode);
     }
 
     /// <summary>
@@ -191,7 +205,11 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
             return;
         }
 
-        _clientNetwork!.Request(request, callback, _stageId, isAuthenticate: true);
+        _clientNetwork!.Request(request, response =>
+        {
+            _stageId = _clientNetwork.StageId;
+            callback(response);
+        }, stageId: 0, isAuthenticate: true);
     }
 
     /// <summary>
@@ -206,7 +224,9 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
             throw new ConnectorException(_stageId, (ushort)ConnectorErrorCode.Disconnected, request, 0);
         }
 
-        return await _clientNetwork!.RequestAsync(request, _stageId, isAuthenticate: true);
+        var response = await _clientNetwork!.RequestAsync(request, stageId: 0, isAuthenticate: true);
+        _stageId = _clientNetwork.StageId;
+        return response;
     }
 
     #endregion

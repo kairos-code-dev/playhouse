@@ -156,7 +156,7 @@ public class ActorSenderVerifier : VerifierBase
     {
         var userId = GenerateUniqueUserId("actor_sender");
         var stageId = GenerateUniqueStageId();
-        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, "Should connect to server");
         await Task.Delay(100);
     }

@@ -257,11 +257,12 @@ public final class Connector implements AutoCloseable {
      * @return 인증 성공 여부 Future
      */
     public CompletableFuture<Boolean> authenticateAsync(Packet authPacket) {
-        return requestAsync(authPacket)
+        return clientNetwork.requestAsync(authPacket, 0L)
             .thenApply(response -> {
                 boolean success = response.getErrorCode() == 0;
                 if (success) {
                     clientNetwork.setAuthenticated(true);
+                    this.stageId = response.getStageId();
                     logger.info("Authentication successful");
                 } else {
                     logger.warn("Authentication failed: errorCode={}", response.getErrorCode());

@@ -80,6 +80,8 @@ public class TestActorImpl : IActor
         return Task.FromResult<(bool, IPacket?)>((true, ProtoCPacketExtensions.OfProto(reply)));
     }
 
+    public Task<long> OnCheckStage() => Task.FromResult(0L);
+
     public Task OnPostAuthenticate()
     {
         return Task.CompletedTask;

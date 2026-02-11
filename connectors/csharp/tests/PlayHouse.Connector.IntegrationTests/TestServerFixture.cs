@@ -82,6 +82,7 @@ public class TestServerFixture : IDisposable
     /// API 응답 매핑용 내부 클래스
     /// </summary>
     private record ApiCreateStageResponse(bool Success, int StageId, string? ReplyPayloadId);
+    private record ApiAssignStageResponse(bool Success, string UserId, long StageId);
 
     /// <summary>
     /// 테스트용 Stage 생성
@@ -139,6 +140,24 @@ public class TestServerFixture : IDisposable
     public Task<CreateStageResponse> CreateTestStageAsync()
     {
         return CreateStageAsync("TestStage");
+    }
+
+    public async Task AssignStageAsync(string userId, long stageId)
+    {
+        var request = new
+        {
+            userId,
+            stageId
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/stage-assignments", request);
+        response.EnsureSuccessStatusCode();
+
+        var apiResult = await response.Content.ReadFromJsonAsync<ApiAssignStageResponse>(_jsonOptions);
+        if (apiResult == null || !apiResult.Success)
+        {
+            throw new InvalidOperationException($"Failed to assign stage for user {userId}");
+        }
     }
 
     public void Dispose()

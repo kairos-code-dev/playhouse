@@ -116,16 +116,14 @@ export class Connector {
     /**
      * Connects to a WebSocket server
      * @param url WebSocket URL (ws:// or wss://)
-     * @param stageId Optional stage ID (default: 0n) - can be number or bigint
-     * @param _stageType Optional stage type (ignored, for compatibility)
      * @returns true if connection succeeded
      */
-    async connect(url: string, stageId: bigint | number = 0n, _stageType?: string): Promise<boolean> {
+    async connect(url: string, _stageId?: bigint | number, _stageType?: string): Promise<boolean> {
         if (this._connection?.isConnected) {
             throw new Error('Already connected. Call disconnect() first.');
         }
 
-        this._stageId = typeof stageId === 'bigint' ? stageId : BigInt(stageId);
+        this._stageId = 0n;
         this._isAuthenticated = false;
         this._lastReceivedTime = Date.now();
         this._lastHeartbeatTime = Date.now();
@@ -145,6 +143,7 @@ export class Connector {
             },
             onDisconnect: () => {
                 this._isAuthenticated = false;
+                this._stageId = 0n;
                 this.clearPendingRequests();
                 this.queueAction(() => this.onDisconnect?.());
             },
@@ -165,6 +164,7 @@ export class Connector {
     disconnect(): void {
         const wasConnected = this._connection?.isConnected ?? false;
         this._isAuthenticated = false;
+        this._stageId = 0n;
         this.clearPendingRequests();
 
         if (this._connection) {
@@ -353,10 +353,11 @@ export class Connector {
             const pending: PendingRequest = {
                 msgSeq,
                 request: authPacket,
-                stageId: this._stageId,
+                stageId: 0n,
                 resolve: (response) => {
                     if (response.errorCode === 0) {
                         this._isAuthenticated = true;
+                        this._stageId = response.stageId;
                         resolve(true);
                     } else {
                         resolve(false);
@@ -371,7 +372,7 @@ export class Connector {
             this._pendingRequests.set(msgSeq, pending);
 
             try {
-                const data = encodePacket(authPacket, msgSeq, this._stageId);
+                const data = encodePacket(authPacket, msgSeq, 0n);
                 this._connection!.send(data);
             } catch (error) {
                 clearTimeout(timeoutId);
@@ -420,10 +421,11 @@ export class Connector {
         const pending: PendingRequest = {
             msgSeq,
             request: authPacket,
-            stageId: this._stageId,
+            stageId: 0n,
             resolve: (response) => {
                 if (response.errorCode === 0) {
                     this._isAuthenticated = true;
+                    this._stageId = response.stageId;
                     this.queueAction(() => callback(true));
                 } else {
                     this.queueAction(() => {
@@ -446,7 +448,7 @@ export class Connector {
         this._pendingRequests.set(msgSeq, pending);
 
         try {
-            const data = encodePacket(authPacket, msgSeq, this._stageId);
+            const data = encodePacket(authPacket, msgSeq, 0n);
             this._connection!.send(data);
         } catch (error) {
             clearTimeout(timeoutId);
@@ -485,10 +487,11 @@ export class Connector {
             const pending: PendingRequest = {
                 msgSeq,
                 request: packet,
-                stageId: this._stageId,
+                stageId: 0n,
                 resolve: (response) => {
                     if (response.errorCode === 0) {
                         this._isAuthenticated = true;
+                        this._stageId = response.stageId;
                     }
                     resolve(response);
                 },
@@ -501,7 +504,7 @@ export class Connector {
             this._pendingRequests.set(msgSeq, pending);
 
             try {
-                const data = encodePacket(packet, msgSeq, this._stageId);
+                const data = encodePacket(packet, msgSeq, 0n);
                 this._connection!.send(data);
             } catch (error) {
                 clearTimeout(timeoutId);
@@ -573,6 +576,7 @@ export class Connector {
                 } else {
                     if (pending.isAuthenticate) {
                         this._isAuthenticated = true;
+                        this._stageId = packet.stageId;
                     }
                     pending.resolve(packet);
                 }

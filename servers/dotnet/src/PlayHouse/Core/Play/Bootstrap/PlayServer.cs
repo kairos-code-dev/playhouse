@@ -336,73 +336,36 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     private async Task HandleAuthenticationAsync(
         ITransportSession session,
         ushort msgSeq,
-        long stageId,
+        long clientStageId,
         IPayload payload)
     {
         try
         {
-            // Stage ID 결정
-            var targetStageId = stageId != 0 ? stageId : GenerateStageId();
+            if (_dispatcher == null || _systemLink == null)
+            {
+                await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InternalError);
+                payload.Dispose();
+                return;
+            }
 
-            BaseStage? baseStage;
-            string stageType;
-
-            // DefaultStageType이 설정되지 않은 경우
             if (string.IsNullOrEmpty(_options.DefaultStageType))
             {
-                // Stage가 이미 존재하는지 확인
-                baseStage = _dispatcher?.GetStage(targetStageId);
-
-                if (baseStage == null)
-                {
-                    // Stage가 없으면 에러 (DefaultStageType이 없으므로 자동 생성 불가)
-                    _logger.LogError("Stage {StageId} not found and DefaultStageType is not set. Stage must be created via API server.", targetStageId);
-                    await SendAuthReplyAsync(session, msgSeq, targetStageId, (ushort)ErrorCode.StageNotFound);
-                    payload.Dispose();
-                    return;
-                }
-
-                // 기존 Stage의 타입 사용
-                stageType = baseStage.StageType;
+                _logger.LogError("DefaultStageType is required for post-auth stage assignment flow.");
+                await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InvalidStageType);
+                payload.Dispose();
+                return;
             }
-            else
-            {
-                // Stage 조회/생성 (DefaultStageType 사용)
-                baseStage = _dispatcher?.GetOrCreateStage(targetStageId, _options.DefaultStageType);
 
-                if (baseStage == null)
-                {
-                    _logger.LogError("Failed to get or create stage {StageId} for authentication", targetStageId);
-                    await SendAuthReplyAsync(session, msgSeq, targetStageId, (ushort)ErrorCode.StageCreationFailed);
-                    payload.Dispose();
-                    return;
-                }
-
-                // Stage 초기화 (OnCreate 호출) - 처음 생성된 경우에만
-                if (!baseStage.IsCreated)
-                {
-                    var createPacket = CPacket.Empty("CreateStage");
-                    var (createSuccess, _) = await baseStage.CreateStage(_options.DefaultStageType, createPacket);
-
-                    if (!createSuccess)
-                    {
-                        _logger.LogError("Failed to initialize stage {StageId}", targetStageId);
-                        await SendAuthReplyAsync(session, msgSeq, targetStageId, (ushort)ErrorCode.StageCreationFailed);
-                        payload.Dispose();
-                        return;
-                    }
-                }
-
-                stageType = _options.DefaultStageType;
-            }
+            var stageType = _options.DefaultStageType;
 
             // 별도 Task에서 Actor 콜백 호출
-            var (success, errorCode, actor, authReplyPacket) = await Task.Run(async () =>
+            var (success, errorCode, targetStageId, actor, authReplyPacket) = await Task.Run(async () =>
             {
                 try
                 {
-                    // XActorLink 생성 (transport session 포함하여 직접 클라이언트 통신 가능)
-                    var actorLink = new XActorLink(_options.ServerId, session.SessionId, _options.ServerId, baseStage, session);
+                    // 인증 단계에서는 Stage 미바인딩 상태로 Actor를 생성하고,
+                    // OnCheckStage 이후 실제 Stage로 바인딩한다.
+                    var actorLink = new XActorLink(_options.ServerId, session.SessionId, _options.ServerId, _systemLink, session);
 
                     // IActor 생성 with DI scope
                     BaseActor actor;
@@ -415,7 +378,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                     catch (KeyNotFoundException)
                     {
                         _logger.LogError("Actor factory not found for stage type: {StageType}", stageType);
-                        return (false, (ushort)ErrorCode.InvalidStageType, (BaseActor?)null, (IPacket?)null);
+                        return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
                     // Actor 콜백 순차 호출
@@ -430,8 +393,8 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         _logger.LogWarning("Authentication rejected for session {SessionId}", session.SessionId);
                         await actor.Actor.OnDestroy();
                         actor.Dispose();  // Dispose Actor's DI scope
-                        // Return custom auth reply if provided, so client receives proper failure response
-                        return (false, (ushort)ErrorCode.AuthenticationFailed, (BaseActor?)null, authReply);
+                        authReply?.Dispose();
+                        return (false, (ushort)ErrorCode.AuthenticationFailed, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
                     // AccountId 검증
@@ -441,55 +404,83 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         await actor.Actor.OnDestroy();
                         actor.Dispose();  // Dispose Actor's DI scope
                         authReply?.Dispose();
-                        return (false, (ushort)ErrorCode.InvalidAccountId, (BaseActor?)null, (IPacket?)null);
+                        return (false, (ushort)ErrorCode.InvalidAccountId, 0L, (BaseActor?)null, (IPacket?)null);
                     }
+
+                    // 인증 후 Stage 할당 결정
+                    var resolvedStageId = await actor.Actor.OnCheckStage();
+                    if (resolvedStageId <= 0 && clientStageId > 0)
+                    {
+                        resolvedStageId = clientStageId;
+                    }
+                    if (resolvedStageId <= 0)
+                    {
+                        _logger.LogWarning("OnCheckStage returned invalid stageId {StageId} for session {SessionId}",
+                            resolvedStageId, session.SessionId);
+                        await actor.Actor.OnDestroy();
+                        actor.Dispose();
+                        authReply?.Dispose();
+                        return (false, (ushort)ErrorCode.StageNotFound, 0L, (BaseActor?)null, (IPacket?)null);
+                    }
+
+                    var baseStage = _dispatcher.GetOrCreateStage(resolvedStageId, stageType);
+                    if (baseStage == null)
+                    {
+                        _logger.LogError("Failed to get or create stage {StageId} after auth", resolvedStageId);
+                        await actor.Actor.OnDestroy();
+                        actor.Dispose();
+                        authReply?.Dispose();
+                        return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
+                    }
+
+                    if (!baseStage.IsCreated)
+                    {
+                        var createPacket = CPacket.Empty("CreateStage");
+                        var (createSuccess, _) = await baseStage.CreateStage(stageType, createPacket);
+                        if (!createSuccess)
+                        {
+                            _logger.LogError("Failed to initialize stage {StageId}", resolvedStageId);
+                            await actor.Actor.OnDestroy();
+                            actor.Dispose();
+                            authReply?.Dispose();
+                            return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
+                        }
+                    }
+
+                    actorLink.BindStage(baseStage);
 
                     // 세션에 인증 정보 설정
                     session.AccountId = actorLink.AccountId;
                     session.IsAuthenticated = true;
-                    session.StageId = targetStageId;
+                    session.StageId = resolvedStageId;
                     await actor.Actor.OnPostAuthenticate();
 
-                    return (true, (ushort)ErrorCode.Success, actor, authReply);
+                    return (true, (ushort)ErrorCode.Success, resolvedStageId, actor, authReply);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error during actor authentication callbacks");
-                    return (false, (ushort)ErrorCode.InternalError, (BaseActor?)null, (IPacket?)null);
+                    return (false, (ushort)ErrorCode.InternalError, 0L, (BaseActor?)null, (IPacket?)null);
                 }
             });
 
-            var authReplyMsgId = _options.AuthenticateMessageId.Replace("Request", "Reply");
-
             if (!success || actor == null)
             {
-                // Send custom auth reply if provided, otherwise use internal format
-                if (authReplyPacket != null)
-                {
-                    session.SendResponse(
-                        authReplyMsgId,
-                        msgSeq,
-                        targetStageId,
-                        errorCode,
-                        authReplyPacket.Payload.DataSpan);
-                    authReplyPacket.Dispose();
-                }
-                else
-                {
-                    await SendAuthReplyAsync(session, msgSeq, targetStageId, errorCode);
-                }
+                await SendAuthReplyAsync(session, msgSeq, targetStageId, errorCode);
                 payload.Dispose();
+                authReplyPacket?.Dispose();
                 return;
             }
 
             // Stage Queue에 JoinActorMessage 전달 (즉시 return, Stage에서 응답 send)
+            var authReplyMsgId = _options.AuthenticateMessageId.Replace("Request", "Reply");
             _dispatcher?.OnPost(new JoinActorMessage(targetStageId, actor, session, msgSeq, authReplyMsgId, payload, authReplyPacket));
             // payload와 authReplyPacket은 JoinActorMessage에서 Dispose됨
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Authentication failed for session {SessionId}", session.SessionId);
-            await SendAuthReplyAsync(session, msgSeq, stageId, (ushort)ErrorCode.InternalError);
+            await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InternalError);
             payload.Dispose();
         }
     }

@@ -209,8 +209,8 @@ public class C11_ErrorResponseTests : BaseIntegrationTest
             connector1.Init(new ConnectorConfig());
             connector2.Init(new ConnectorConfig());
 
-            await connector1.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage1.StageId, stage1.StageType);
-            await connector2.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage2.StageId, stage2.StageType);
+            await connector1.ConnectAsync(TestServer.Host, TestServer.TcpPort);
+            await connector2.ConnectAsync(TestServer.Host, TestServer.TcpPort);
 
             var auth1 = new AuthenticateRequest { UserId = "user1", Token = "valid_token" };
             var auth2 = new AuthenticateRequest { UserId = "user2", Token = "valid_token" };

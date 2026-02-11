@@ -318,8 +318,8 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
             connector2Received.Add(notify.Data);
         };
 
-        await connector1.ConnectAsync(_testServer.Host, _testServer.TcpPort, _stages[0].StageId, _stages[0].StageType);
-        await connector2.ConnectAsync(_testServer.Host, _testServer.TcpPort, _stages[1].StageId, _stages[1].StageType);
+        await connector1.ConnectAsync(_testServer.Host, _testServer.TcpPort);
+        await connector2.ConnectAsync(_testServer.Host, _testServer.TcpPort);
 
         var auth1 = new AuthenticateRequest { UserId = "event-user-1", Token = "valid_token" };
         using var auth1Packet = new Packet(auth1);

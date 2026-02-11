@@ -68,6 +68,7 @@ public class PlayProducerTests
         public Task OnCreate() => Task.CompletedTask;
         public Task OnDestroy() => Task.CompletedTask;
         public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket) => Task.FromResult<(bool, IPacket?)>((true, null));
+        public Task<long> OnCheckStage() => Task.FromResult(0L);
         public Task OnPostAuthenticate() => Task.CompletedTask;
     }
 

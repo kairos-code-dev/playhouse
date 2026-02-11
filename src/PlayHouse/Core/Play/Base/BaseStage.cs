@@ -418,6 +418,15 @@ internal sealed class BaseStage(
             return (false, (ushort)ErrorCode.InvalidAccountId, null, null);
         }
 
+        var checkedStageId = await actor.OnCheckStage();
+        if (checkedStageId <= 0 || checkedStageId != StageId)
+        {
+            await actor.OnDestroy();
+            actorScope?.Dispose();
+            authReply?.Dispose();
+            return (false, (ushort)ErrorCode.StageNotFound, null, null);
+        }
+
         await actor.OnPostAuthenticate();
         return (true, (ushort)ErrorCode.Success, new BaseActor(actor, actorSender, actorScope), authReply);
     }

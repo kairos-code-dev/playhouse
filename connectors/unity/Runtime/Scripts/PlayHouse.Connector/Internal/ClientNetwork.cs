@@ -29,6 +29,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
     private int _msgSeqCounter;
     // Fix #9: Mark as volatile for thread-safe access (written on network thread, read on main thread)
     private volatile bool _isAuthenticated;
+    private long _stageId;
     // Fix #10: Mark as volatile for thread-safe access (written on main thread, read on network thread)
     private volatile bool _debugMode;
 
@@ -46,6 +47,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
     public bool IsConnect() => _connection?.IsConnected ?? false;
 
     public bool IsAuthenticated() => _isAuthenticated;
+    public long StageId => Interlocked.Read(ref _stageId);
 
     public bool IsDebugMode() => _debugMode;
 
@@ -70,6 +72,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
             // 상태 초기화
             _isAuthenticated = false;
+            Interlocked.Exchange(ref _stageId, 0);
             ClearPendingRequests();
 
             _connection = _config.UseWebsocket
@@ -120,6 +123,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
     public async Task DisconnectAsync()
     {
         _isAuthenticated = false;
+        Interlocked.Exchange(ref _stageId, 0);
         ClearPendingRequests();
         await CleanupConnectionAsync();
     }
@@ -464,6 +468,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
             if (pending.IsAuthenticate && parsed.ErrorCode == 0)
             {
                 _isAuthenticated = true;
+                Interlocked.Exchange(ref _stageId, parsed.StageId);
             }
 
             if (parsed.ErrorCode != 0)
@@ -516,6 +521,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
     private void OnDisconnected(object? sender, Exception? exception)
     {
         _isAuthenticated = false;
+        Interlocked.Exchange(ref _stageId, 0);
         ClearPendingRequests();
 
         if (exception != null)

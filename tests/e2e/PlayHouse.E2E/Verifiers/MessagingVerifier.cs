@@ -49,7 +49,7 @@ public class MessagingVerifier : VerifierBase
         if (!Connector.IsConnected())
         {
             var stageId = GenerateUniqueStageId();
-            var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+            var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
             Assert.IsTrue(connected, "Should connect to server");
             await Task.Delay(100);
         }
@@ -200,7 +200,7 @@ public class MessagingVerifier : VerifierBase
         try
         {
             var stageId = GenerateUniqueStageId();
-            await tempConnector.ConnectAsync("127.0.0.1", ServerContext.TcpPort, stageId, "TestStage");
+            await tempConnector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
             await Task.Delay(100);
 
             // 인증

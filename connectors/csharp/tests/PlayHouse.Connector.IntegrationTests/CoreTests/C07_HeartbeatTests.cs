@@ -134,9 +134,9 @@ public class C07_HeartbeatTests : BaseIntegrationTest
             connector2.Init(new ConnectorConfig());
             connector3.Init(new ConnectorConfig());
 
-            await connector1.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage1.StageId, stage1.StageType);
-            await connector2.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage2.StageId, stage2.StageType);
-            await connector3.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage3.StageId, stage3.StageType);
+            await connector1.ConnectAsync(TestServer.Host, TestServer.TcpPort);
+            await connector2.ConnectAsync(TestServer.Host, TestServer.TcpPort);
+            await connector3.ConnectAsync(TestServer.Host, TestServer.TcpPort);
 
             // 모두 인증
             var auth1 = new PlayHouse.TestServer.Proto.AuthenticateRequest { UserId = "user1", Token = "valid_token" };

@@ -83,7 +83,7 @@ public class DIIntegrationVerifier(ServerContext serverContext) : VerifierBase(s
     {
         // Given - DI가 구성된 서버에 연결
         var stageId = GenerateUniqueStageId();
-        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.DITcpPort, stageId, "DITestStage");
+        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.DITcpPort);
         Assert.IsTrue(connected, "DI PlayServer에 연결되어야 함");
         await Task.Delay(200);
 
@@ -143,7 +143,7 @@ public class DIIntegrationVerifier(ServerContext serverContext) : VerifierBase(s
     {
         // Given - DI가 구성된 서버에 연결
         var stageId = GenerateUniqueStageId();
-        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.DITcpPort, stageId, "DITestStage");
+        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.DITcpPort);
         Assert.IsTrue(connected, "DI PlayServer에 연결되어야 함");
         await Task.Delay(200);
 
@@ -247,7 +247,7 @@ public class DIIntegrationVerifier(ServerContext serverContext) : VerifierBase(s
     {
         // Given - DI가 구성된 서버에 연결
         var stageId = GenerateUniqueStageId();
-        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.DITcpPort, stageId, "DITestStage");
+        var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.DITcpPort);
         Assert.IsTrue(connected, "DI PlayServer에 연결되어야 함");
         await Task.Delay(200);
 

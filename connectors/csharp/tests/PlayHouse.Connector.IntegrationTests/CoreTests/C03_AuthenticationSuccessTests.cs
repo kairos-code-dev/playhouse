@@ -158,9 +158,9 @@ public class C03_AuthenticationSuccessTests : BaseIntegrationTest
             connector3.Init(new ConnectorConfig());
 
             // When: 3개의 Connector가 각각 연결 및 인증
-            await connector1.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage1.StageId, stage1.StageType);
-            await connector2.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage2.StageId, stage2.StageType);
-            await connector3.ConnectAsync(TestServer.Host, TestServer.TcpPort, stage3.StageId, stage3.StageType);
+            await connector1.ConnectAsync(TestServer.Host, TestServer.TcpPort);
+            await connector2.ConnectAsync(TestServer.Host, TestServer.TcpPort);
+            await connector3.ConnectAsync(TestServer.Host, TestServer.TcpPort);
 
             var auth1Request = new AuthenticateRequest { UserId = "user1", Token = "valid_token" };
             var auth2Request = new AuthenticateRequest { UserId = "user2", Token = "valid_token" };
