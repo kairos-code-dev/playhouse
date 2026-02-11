@@ -11,7 +11,7 @@
   <ItemGroup>
     <!-- Google.Protobuf and Grpc.Tools for proto compilation -->
     <PackageReference Include="Google.Protobuf" Version="3.28.3" />
-    <PackageReference Include="Grpc.Tools" Version="2.68.1" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Tools" Version="2.78.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
