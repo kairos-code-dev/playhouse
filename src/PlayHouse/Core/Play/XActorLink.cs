@@ -35,6 +35,8 @@ internal sealed class XActorLink : IActorLink
     /// <inheritdoc/>
     public long StageId { get; set; }
 
+    internal string AuthStageType { get; private set; } = string.Empty;
+
     /// <inheritdoc/>
     public ServerType ServerType => ActiveLink.ServerType;
 
@@ -146,6 +148,20 @@ internal sealed class XActorLink : IActorLink
 
         AccountId = accountId;
         StageId = stageId;
+        AuthStageType = string.Empty;
+    }
+
+    /// <inheritdoc/>
+    public void SetAuthContext(string accountId, string stageType)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new ArgumentException("AccountId must not be empty.", nameof(accountId));
+        if (string.IsNullOrWhiteSpace(stageType))
+            throw new ArgumentException("StageType must not be empty.", nameof(stageType));
+
+        AccountId = accountId;
+        StageId = 0;
+        AuthStageType = stageType;
     }
 
     #endregion

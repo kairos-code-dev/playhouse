@@ -12,10 +12,14 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
 {
     private readonly List<bool> _connectResults = new();
     private int _disconnectCount;
+    private readonly ConnectorConfig _connectorConfig = new()
+    {
+        RequestTimeoutMs = 30000
+    };
 
     public override string CategoryName => "Connection";
 
-    public override int GetTestCount() => 8;
+    public override int GetTestCount() => 10;
 
     protected override Task SetupAsync()
     {
@@ -61,14 +65,14 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         await RunTest("OnDisconnect_CallbackInvoked", Test_OnDisconnect_CallbackInvoked);
         await RunTest("Authenticate_Success_Async", Test_Authenticate_Success_Async);
         await RunTest("Authenticate_Success_Callback", Test_Authenticate_Success_Callback);
+        await RunTest("Authenticate_SingleStage_AutoCreate", Test_Authenticate_SingleStage_AutoCreate);
+        await RunTest("Authenticate_SingleStage_SameUserSameStage", Test_Authenticate_SingleStage_SameUserSameStage);
     }
 
     private async Task Test_Connect_Success()
     {
         // Given
         _connectResults.Clear();
-        var stageId = GenerateUniqueStageId();
-
         // When
         var result = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         await Task.Delay(200);
@@ -94,8 +98,6 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
     {
         // Given
         _connectResults.Clear();
-        var stageId = GenerateUniqueStageId();
-
         // When - 존재하지 않는 포트로 연결 시도
         var result = await Connector.ConnectAsync("127.0.0.1", 59999);
         await Task.Delay(200);
@@ -116,8 +118,6 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
     private async Task Test_ConnectAsync_Success()
     {
         // Given
-        var stageId = GenerateUniqueStageId();
-
         // When
         var result = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         await Task.Delay(100);
@@ -134,8 +134,6 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
     private async Task Test_ConnectAsync_InvalidHost()
     {
         // Given
-        var stageId = GenerateUniqueStageId();
-
         // When
         var result = await Connector.ConnectAsync("127.0.0.1", 59999);
 
@@ -251,14 +249,80 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         await Task.Delay(100);
     }
 
+    private async Task Test_Authenticate_SingleStage_AutoCreate()
+    {
+        await ConnectOnlyAsync();
+
+        var userId = GenerateUniqueUserId("single_auto");
+        var authRequest = new AuthenticateRequest
+        {
+            UserId = userId,
+            Token = "single-stage"
+        };
+
+        using var authPacket = new Packet(authRequest);
+        var response = await Connector.AuthenticateAsync(authPacket);
+        var reply = AuthenticateReply.Parser.ParseFrom(response.Payload.DataSpan);
+
+        Assert.IsTrue(Connector.IsAuthenticated(), "single-stage auth should authenticate connector");
+        Assert.IsTrue(Connector.StageId > 0, "single-stage auth should assign a stage id");
+        Assert.Equals(userId, reply.ReceivedUserId, "AuthenticateReply should echo user id");
+
+        Connector.Disconnect();
+        await Task.Delay(100);
+    }
+
+    private async Task Test_Authenticate_SingleStage_SameUserSameStage()
+    {
+        var userId = GenerateUniqueUserId("single_same_user");
+
+        await ConnectOnlyAsync();
+        var stageId1 = await AuthenticateSingleStageAsync(Connector, userId);
+        Connector.Disconnect();
+        await Task.Delay(100);
+
+        var connector2 = new PlayHouse.Connector.Connector();
+        connector2.Init(_connectorConfig);
+        try
+        {
+            var connected = await connector2.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
+            Assert.IsTrue(connected, "second connector should connect");
+
+            var stageId2 = await AuthenticateSingleStageAsync(connector2, userId);
+            Assert.Equals(stageId1, stageId2, "same account + stageType should resolve to same single stage");
+        }
+        finally
+        {
+            if (connector2.IsConnected())
+            {
+                connector2.Disconnect();
+            }
+
+            await connector2.DisposeAsync();
+        }
+    }
+
     #region Helper Methods
 
     private async Task ConnectOnlyAsync()
     {
-        var stageId = GenerateUniqueStageId();
         var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, "Should connect to server");
         await Task.Delay(100);
+    }
+
+    private static async Task<long> AuthenticateSingleStageAsync(PlayHouse.Connector.Connector connector, string userId)
+    {
+        var request = new AuthenticateRequest
+        {
+            UserId = userId,
+            Token = "single-stage"
+        };
+
+        using var authPacket = new Packet(request);
+        var response = await connector.AuthenticateAsync(authPacket);
+        _ = AuthenticateReply.Parser.ParseFrom(response.Payload.DataSpan);
+        return connector.StageId;
     }
 
     private void OnConnect(bool result)

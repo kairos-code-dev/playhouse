@@ -13,7 +13,7 @@ namespace PlayHouse.Extensions;
 public interface IPlayServerBuilder
 {
     IServiceCollection Services { get; }
-    IPlayServerBuilder UseStage<TStage, TActor>(string stageType)
+    IPlayServerBuilder UseStage<TStage, TActor>(string stageType, StageMode mode = StageMode.Multi)
         where TStage : class, IStage
         where TActor : class, IActor;
 

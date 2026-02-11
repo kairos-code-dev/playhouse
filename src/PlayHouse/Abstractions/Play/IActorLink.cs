@@ -39,6 +39,13 @@ public interface IActorLink : ILink
     void SetAuthContext(string accountId, long stageId);
 
     /// <summary>
+    /// Sets AccountId and StageType for single-stage authentication context.
+    /// </summary>
+    /// <param name="accountId">Account identifier.</param>
+    /// <param name="stageType">Registered stage type configured as StageMode.Single.</param>
+    void SetAuthContext(string accountId, string stageType);
+
+    /// <summary>
     /// Removes this Actor from the current Stage.
     /// </summary>
     /// <remarks>

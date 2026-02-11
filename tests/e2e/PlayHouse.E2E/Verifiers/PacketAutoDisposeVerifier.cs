@@ -299,15 +299,13 @@ public class PacketAutoDisposeVerifier : VerifierBase
     /// </summary>
     private async Task Test_OnDispatch_RequestToStage_AutoDispose()
     {
-        // Given - 두 번째 Stage 생성 (RequestToStage 대상)
-        var stageId2 = GenerateUniqueStageId(20000);
-
-        // 새 Connector로 두 번째 Stage 생성
+        // Given - 새 Connector로 두 번째 Stage 생성
         var connector2 = new PlayHouse.Connector.Connector();
         connector2.Init(new PlayHouse.Connector.ConnectorConfig { RequestTimeoutMs = 30000 });
         await connector2.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         using var authPacket2 = Packet.Empty("AuthenticateRequest");
         await connector2.AuthenticateAsync(authPacket2);
+        var stageId2 = connector2.StageId;
 
         try
         {

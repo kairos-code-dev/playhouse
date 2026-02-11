@@ -45,11 +45,6 @@ public class TestActorImpl : IActor
 
     public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
     {
-        var accountId = Interlocked.Increment(ref _accountIdCounter);
-        ActorLink.SetAuthContext(accountId.ToString(), accountId);
-
-        _logger.LogInformation("OnAuthenticate called for AccountId={AccountId}", ActorLink.AccountId);
-
         // authPacket 파싱하여 E2E 검증 가능하도록 echo
         string receivedUserId = "";
         string receivedToken = "";
@@ -66,6 +61,21 @@ public class TestActorImpl : IActor
                 // 빈 packet이거나 파싱 실패 시 무시
             }
         }
+
+        if (string.Equals(receivedToken, "single-stage", StringComparison.OrdinalIgnoreCase))
+        {
+            var singleAccountId = string.IsNullOrWhiteSpace(receivedUserId)
+                ? $"single-{Interlocked.Increment(ref _accountIdCounter)}"
+                : receivedUserId;
+            ActorLink.SetAuthContext(singleAccountId, "SingleStage");
+        }
+        else
+        {
+            var accountId = Interlocked.Increment(ref _accountIdCounter);
+            ActorLink.SetAuthContext(accountId.ToString(), accountId);
+        }
+
+        _logger.LogInformation("OnAuthenticate called for AccountId={AccountId}", ActorLink.AccountId);
 
         // Reply packet 생성 (클라이언트에 전달됨)
         var reply = new AuthenticateReply

@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Collections.Concurrent;
 using Google.Protobuf;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,6 +45,8 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
 
     private bool _isRunning;
     private bool _disposed;
+    private readonly ConcurrentDictionary<string, int> _singleStageIds = new();
+    private int _singleStageIdCounter = 1_500_000_000;
 
     /// <summary>
     /// 실제 바인딩된 TCP 포트.
@@ -408,17 +411,46 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         return (false, (ushort)ErrorCode.InvalidAccountId, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    if (actorLink.StageId <= 0)
+                    long resolvedStageId;
+                    string stageType;
+                    if (actorLink.StageId > 0)
                     {
-                        _logger.LogWarning("StageId not set after authentication for session {SessionId}", session.SessionId);
+                        resolvedStageId = actorLink.StageId;
+                        stageType = actorFactoryStageType;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(actorLink.AuthStageType))
+                    {
+                        stageType = actorLink.AuthStageType;
+                        if (!_producer.IsValidType(stageType))
+                        {
+                            _logger.LogWarning("Invalid single stage type {StageType} for session {SessionId}", stageType, session.SessionId);
+                            await actor.Actor.OnDestroy();
+                            actor.Dispose();
+                            authReply?.Dispose();
+                            return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
+                        }
+
+                        if (!_producer.IsSingleStageType(stageType))
+                        {
+                            _logger.LogWarning("StageType {StageType} is not registered as single-stage", stageType);
+                            await actor.Actor.OnDestroy();
+                            actor.Dispose();
+                            authReply?.Dispose();
+                            return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
+                        }
+
+                        resolvedStageId = ResolveSingleStageId(actorLink.AccountId, stageType);
+                        actorLink.StageId = resolvedStageId;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Auth context not set after authentication for session {SessionId}", session.SessionId);
                         await actor.Actor.OnDestroy();
                         actor.Dispose();
                         authReply?.Dispose();
                         return (false, (ushort)ErrorCode.StageNotFound, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    var resolvedStageId = actorLink.StageId;
-                    var stageType = actorFactoryStageType;
                     var baseStage = _dispatcher.GetOrCreateStage(resolvedStageId, stageType);
 
                     if (baseStage == null)
@@ -518,6 +550,21 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         }
 
         return Task.CompletedTask;
+    }
+
+    private int ResolveSingleStageId(string accountId, string stageType)
+    {
+        var key = $"{stageType}:{accountId}";
+        return _singleStageIds.GetOrAdd(key, _ =>
+        {
+            var next = Interlocked.Increment(ref _singleStageIdCounter);
+            if (next <= 0)
+            {
+                throw new InvalidOperationException("Single-stage id counter overflowed.");
+            }
+
+            return next;
+        });
     }
 
     private long GenerateStageId()

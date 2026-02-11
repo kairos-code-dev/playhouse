@@ -16,6 +16,7 @@ internal sealed class PlayServerBuilder : IPlayServerBuilder
     private readonly PlayServerOption _options;
     private readonly Dictionary<string, Type> _stageTypes = new();
     private readonly Dictionary<string, Type> _actorTypes = new();
+    private readonly Dictionary<string, StageMode> _stageModes = new();
     private Type _systemControllerType = null!;
 
     public IServiceCollection Services => _services;
@@ -26,12 +27,13 @@ internal sealed class PlayServerBuilder : IPlayServerBuilder
         _options = options;
     }
 
-    public IPlayServerBuilder UseStage<TStage, TActor>(string stageType)
+    public IPlayServerBuilder UseStage<TStage, TActor>(string stageType, StageMode mode = StageMode.Multi)
         where TStage : class, IStage
         where TActor : class, IActor
     {
         _stageTypes[stageType] = typeof(TStage);
         _actorTypes[stageType] = typeof(TActor);
+        _stageModes[stageType] = mode;
         return this;
     }
 
@@ -76,7 +78,7 @@ internal sealed class PlayServerBuilder : IPlayServerBuilder
             // ISystemController 필수 검증
             var systemController = sp.GetRequiredService<ISystemController>();
 
-            var producer = new PlayProducer(_stageTypes, _actorTypes, sp);
+            var producer = new PlayProducer(_stageTypes, _actorTypes, sp, _stageModes);
             return new PlayServer(_options, producer, systemController, loggerFactory);
         });
 

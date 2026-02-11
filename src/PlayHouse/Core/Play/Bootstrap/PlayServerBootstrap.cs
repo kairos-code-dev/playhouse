@@ -49,6 +49,7 @@ public sealed class PlayServerBootstrap
     private readonly PlayServerOption _options = new();
     private readonly Dictionary<string, Type> _stageTypes = new();
     private readonly Dictionary<string, Type> _actorTypes = new();
+    private readonly Dictionary<string, StageMode> _stageModes = new();
     private Type _systemControllerType = null!;
     private ILoggerFactory _loggerFactory = null!;
     private IServiceProvider _serviceProvider = null!;
@@ -180,6 +181,7 @@ public sealed class PlayServerBootstrap
     /// <typeparam name="TStage">IStage 구현 타입.</typeparam>
     /// <typeparam name="TActor">IActor 구현 타입.</typeparam>
     /// <param name="stageType">Stage 타입 이름.</param>
+    /// <param name="mode">Stage 동작 모드 (기본값: Multi).</param>
     /// <returns>빌더 인스턴스.</returns>
     /// <remarks>
     /// TStage는 IStageLink를 받는 생성자가 필요하고, TActor는 IActorLink를 받는 생성자가 필요합니다.
@@ -188,12 +190,13 @@ public sealed class PlayServerBootstrap
     /// public MyActor(IActorLink actorLink) { ActorLink = actorLink; }
     /// </code>
     /// </remarks>
-    public PlayServerBootstrap UseStage<TStage, TActor>(string stageType)
+    public PlayServerBootstrap UseStage<TStage, TActor>(string stageType, StageMode mode = StageMode.Multi)
         where TStage : class, IStage
         where TActor : class, IActor
     {
         _stageTypes[stageType] = typeof(TStage);
         _actorTypes[stageType] = typeof(TActor);
+        _stageModes[stageType] = mode;
         return this;
     }
 
@@ -238,7 +241,7 @@ public sealed class PlayServerBootstrap
         var systemController = ActivatorUtilities.CreateInstance(serviceProvider, systemControllerType) as ISystemController
             ?? throw new InvalidOperationException($"Failed to create SystemController instance: {systemControllerType.Name}");
 
-        var producer = new PlayProducer(_stageTypes, _actorTypes, serviceProvider);
+        var producer = new PlayProducer(_stageTypes, _actorTypes, serviceProvider, _stageModes);
         return new PlayServer(_options, producer, systemController, loggerFactory);
     }
 }

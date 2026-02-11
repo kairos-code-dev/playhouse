@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PlayHouse.Abstractions.Api;
+using PlayHouse.Abstractions.Play;
 using PlayHouse.Core.Api.Bootstrap;
 using PlayHouse.Core.Play.Bootstrap;
 using PlayHouse.Extensions;
@@ -82,6 +83,7 @@ public static class ServerFactory
             .UseLoggerFactory(loggerFactory)
             .UseServiceProvider(serviceProvider)
             .UseStage<TestStageImpl, TestActorImpl>(defaultStageType)
+            .UseStage<TestStageImpl, TestActorImpl>("SingleStage", StageMode.Single)
             .UseSystemController<TestSystemController>()
             .Build();
 

@@ -26,6 +26,7 @@ public class PlayProducer
     private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<string, Type> _stageTypes = new();
     private readonly Dictionary<string, Type> _actorTypes = new();
+    private readonly Dictionary<string, StageMode> _stageModes = new();
     private readonly Dictionary<string, Func<IStageLink, IStage>> _stageFactories = new();
     private readonly Dictionary<string, Func<IActorLink, IActor>> _actorFactories = new();
 
@@ -35,14 +36,24 @@ public class PlayProducer
     /// <param name="stageTypes">Dictionary of stage type names to Stage implementation types.</param>
     /// <param name="actorTypes">Dictionary of stage type names to Actor implementation types.</param>
     /// <param name="serviceProvider">Service provider for dependency injection (required).</param>
+    /// <param name="stageModes">Optional dictionary of stage type names to stage mode metadata.</param>
     public PlayProducer(
         Dictionary<string, Type> stageTypes,
         Dictionary<string, Type> actorTypes,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        Dictionary<string, StageMode>? stageModes = null)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _stageTypes = stageTypes ?? throw new ArgumentNullException(nameof(stageTypes));
         _actorTypes = actorTypes ?? throw new ArgumentNullException(nameof(actorTypes));
+
+        if (stageModes != null)
+        {
+            foreach (var (stageType, mode) in stageModes)
+            {
+                _stageModes[stageType] = mode;
+            }
+        }
     }
 
     /// <summary>
@@ -51,13 +62,15 @@ public class PlayProducer
     /// <param name="stageType">The unique identifier for this stage type.</param>
     /// <param name="stageFactory">Factory function to create IStage instances.</param>
     /// <param name="actorFactory">Factory function to create IActor instances.</param>
+    /// <param name="mode">Stage mode metadata for this stage type.</param>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the stageType is already registered.
     /// </exception>
     public void Register(
         string stageType,
         Func<IStageLink, IStage> stageFactory,
-        Func<IActorLink, IActor> actorFactory)
+        Func<IActorLink, IActor> actorFactory,
+        StageMode mode = StageMode.Multi)
     {
         if (!_stageFactories.TryAdd(stageType, stageFactory))
         {
@@ -65,6 +78,7 @@ public class PlayProducer
         }
 
         _actorFactories[stageType] = actorFactory;
+        _stageModes[stageType] = mode;
     }
 
     /// <summary>
@@ -208,6 +222,16 @@ public class PlayProducer
     internal bool IsValidType(string stageType)
     {
         return _stageFactories.ContainsKey(stageType) || _stageTypes.ContainsKey(stageType);
+    }
+
+    internal bool IsSingleStageType(string stageType)
+    {
+        if (_stageModes.TryGetValue(stageType, out var mode))
+        {
+            return mode == StageMode.Single;
+        }
+
+        return false;
     }
 
     /// <summary>
