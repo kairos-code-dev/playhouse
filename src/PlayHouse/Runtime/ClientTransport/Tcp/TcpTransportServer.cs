@@ -148,6 +148,10 @@ public sealed class TcpTransportServer : ITransportServer
         }
         catch (OperationCanceledException) { }
         catch (ObjectDisposedException) { }
+        catch (SocketException) when (ct.IsCancellationRequested || _disposed)
+        {
+            // Listener was stopped as part of normal shutdown.
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in accept loop");
@@ -201,6 +205,11 @@ public sealed class TcpTransportServer : ITransportServer
         catch (AuthenticationException ex)
         {
             _logger.LogWarning(ex, "TLS authentication failed for session {SessionId}", sessionId);
+            stream.Dispose();
+            socket.Dispose();
+        }
+        catch (SocketException) when (ct.IsCancellationRequested || _disposed)
+        {
             stream.Dispose();
             socket.Dispose();
         }

@@ -144,7 +144,7 @@ internal sealed class WebSocketTransportSession : ITransportSession
         if (_disposed || _webSocket.State != WebSocketState.Open) return;
 
         // 클라이언트는 [4바이트 길이] + [메시지 본문] 형식을 기대함 (TCP와 동일)
-        var totalSize = MessageCodec.CalculateResponseSize(msgId.Length, payload.Length, includeLengthPrefix: true);
+        var totalSize = MessageCodec.CalculateResponseSize(msgId, payload.Length, includeLengthPrefix: true);
         var buffer = MessagePool.Rent(totalSize);
         var span = buffer.AsSpan(0, totalSize);
         BinaryPrimitives.WriteInt32LittleEndian(span, totalSize - 4);

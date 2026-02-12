@@ -267,7 +267,7 @@ internal sealed class TcpTransportSession : ITransportSession
     {
         if (_disposed) return;
 
-        var totalSize = MessageCodec.CalculateResponseSize(msgId.Length, payload.Length, includeLengthPrefix: true);
+        var totalSize = MessageCodec.CalculateResponseSize(msgId, payload.Length, includeLengthPrefix: true);
         
         // Use MessagePool for output buffer
         var buffer = MessagePool.Rent(totalSize);

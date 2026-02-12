@@ -649,6 +649,10 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _isAuthenticated = false;
+        Interlocked.Exchange(ref _stageId, 0);
+        ClearPendingRequests();
+
         // Fix #11: Detach event handlers and cleanup connection
         await CleanupConnectionAsync();
     }

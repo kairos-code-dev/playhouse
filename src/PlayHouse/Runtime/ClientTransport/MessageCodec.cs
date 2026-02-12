@@ -91,6 +91,15 @@ internal static class MessageCodec
     }
 
     /// <summary>
+    /// Calculates the response packet size using UTF-8 byte count for message id.
+    /// </summary>
+    public static int CalculateResponseSize(string msgId, int payloadLength, bool includeLengthPrefix)
+    {
+        var msgIdLength = Encoding.UTF8.GetByteCount(msgId);
+        return CalculateResponseSize(msgIdLength, payloadLength, includeLengthPrefix);
+    }
+
+    /// <summary>
     /// Writes a response packet body (without length prefix).
     /// </summary>
     /// <returns>Number of bytes written.</returns>

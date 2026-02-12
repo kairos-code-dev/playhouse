@@ -72,8 +72,22 @@ public class RequestCache
             {
                 if (item.Value.IsExpired(_timeoutMs))
                 {
-                    item.Value.OnReceive((ushort)ConnectorErrorCode.RequestTimeout, Packet.Empty(PacketConst.Timeout));
-                    keysToDelete.Add(item.Key);
+                    try
+                    {
+                        item.Value.OnReceive((ushort)ConnectorErrorCode.RequestTimeout, Packet.Empty(PacketConst.Timeout));
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_enableLoggingResponseTime)
+                        {
+                            // TODO: Add logging
+                            Console.WriteLine($"Request timeout callback failed - [msgSeq:{item.Key},error:{ex.Message}]");
+                        }
+                    }
+                    finally
+                    {
+                        keysToDelete.Add(item.Key);
+                    }
                 }
             }
 
@@ -107,15 +121,16 @@ public class RequestCache
     public void OnReply(ClientPacket clientPacket)
     {
         var msgSeq = clientPacket.MsgSeq;
-        var stageId = clientPacket.Header.StageId;
         var replyObject = Get(msgSeq);
 
         if (replyObject != null)
         {
+            Remove(msgSeq);
+            replyObject.TouchReceive();
+
             var packet = clientPacket.ToPacket();
             var errorCode = clientPacket.Header.ErrorCode;
             replyObject.OnReceive(errorCode, packet);
-            Remove(msgSeq);
 
             if (_enableLoggingResponseTime)
             {
@@ -123,10 +138,10 @@ public class RequestCache
                 Console.WriteLine($"response time - [msgId:{clientPacket.MsgId},msgSeq:{msgSeq},elapsedTime:{replyObject.GetElapsedTime()}]");
             }
         }
-        else
+        else if (_enableLoggingResponseTime)
         {
             // TODO: Add logging
-            Console.WriteLine($"OnReply Already Removed - [errorCode:{clientPacket.Header.ErrorCode},msgSeq:{msgSeq},msgId:{clientPacket.MsgId},stageId:{stageId}]");
+            Console.WriteLine($"OnReply Already Removed - [errorCode:{clientPacket.Header.ErrorCode},msgSeq:{msgSeq},msgId:{clientPacket.MsgId},stageId:{clientPacket.Header.StageId}]");
         }
     }
 

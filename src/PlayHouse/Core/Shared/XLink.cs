@@ -394,19 +394,15 @@ public abstract class XLink : ILink
         var tcs = new TaskCompletionSource<IPacket>();
         _requestCache.Register(replyObject.MsgSeq, tcs, TimeSpan.FromMilliseconds(_requestTimeoutMs));
 
-        Console.WriteLine($"[XLink] Registered Reply: MsgSeq={replyObject.MsgSeq}");
-
         // Bridge ReplyObject to RequestCache
         tcs.Task.ContinueWith(t =>
         {
             if (t.IsCompletedSuccessfully)
             {
-                Console.WriteLine($"[XLink] Reply Received: MsgSeq={replyObject.MsgSeq}, Success");
                 replyObject.Complete(t.Result);
             }
             else
             {
-                Console.WriteLine($"[XLink] Reply Error: MsgSeq={replyObject.MsgSeq}, Exception={t.Exception?.Message}");
                 replyObject.CompleteWithError((ushort)ErrorCode.RequestTimeout);
             }
         }, TaskContinuationOptions.ExecuteSynchronously);

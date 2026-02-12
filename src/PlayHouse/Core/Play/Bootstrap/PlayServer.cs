@@ -1,5 +1,8 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Net.Sockets;
+using System.Net.WebSockets;
 using Google.Protobuf;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -46,6 +49,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     private bool _isRunning;
     private bool _disposed;
     private readonly ConcurrentDictionary<string, int> _singleStageIds = new();
+    private readonly ConcurrentDictionary<long, SemaphoreSlim> _stageInitializationLocks = new();
     private int _singleStageIdCounter = 1_500_000_000;
 
     /// <summary>
@@ -449,29 +453,24 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         return (false, (ushort)ErrorCode.StageNotFound, 0L, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    var baseStage = _dispatcher.GetOrCreateStage(resolvedStageId, stageType);
-
-                    if (baseStage == null)
+                    var stageReady = await CreateStageIfNotExistsAsync(resolvedStageId, stageType);
+                    if (!stageReady)
                     {
-                        _logger.LogError("Failed to get or create stage {StageId} after auth", resolvedStageId);
+                        _logger.LogError("Failed to initialize stage {StageId}", resolvedStageId);
                         await actor.Actor.OnDestroy();
                         actor.Dispose();
                         authReply?.Dispose();
                         return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    if (!baseStage.IsCreated)
+                    var baseStage = _dispatcher.GetStage(resolvedStageId);
+                    if (baseStage == null)
                     {
-                        var createPacket = CPacket.Empty("CreateStage");
-                        var (createSuccess, _) = await baseStage.CreateStage(stageType, createPacket);
-                        if (!createSuccess)
-                        {
-                            _logger.LogError("Failed to initialize stage {StageId}", resolvedStageId);
-                            await actor.Actor.OnDestroy();
-                            actor.Dispose();
-                            authReply?.Dispose();
-                            return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
-                        }
+                        _logger.LogError("Stage {StageId} was not found after successful initialization", resolvedStageId);
+                        await actor.Actor.OnDestroy();
+                        actor.Dispose();
+                        authReply?.Dispose();
+                        return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
                     }
 
                     actorLink.BindStage(baseStage);
@@ -579,14 +578,28 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     {
         if (ex != null)
         {
-            _logger.LogWarning(
-                ex,
-                "Session {SessionId} disconnected with error (Connected={IsConnected}, Auth={IsAuthenticated}, StageId={StageId}, AccountId={AccountId})",
-                session.SessionId,
-                session.IsConnected,
-                session.IsAuthenticated,
-                session.StageId,
-                session.AccountId);
+            if (IsExpectedDisconnectException(ex))
+            {
+                _logger.LogDebug(
+                    ex,
+                    "Session {SessionId} disconnected (Connected={IsConnected}, Auth={IsAuthenticated}, StageId={StageId}, AccountId={AccountId})",
+                    session.SessionId,
+                    session.IsConnected,
+                    session.IsAuthenticated,
+                    session.StageId,
+                    session.AccountId);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Session {SessionId} disconnected with error (Connected={IsConnected}, Auth={IsAuthenticated}, StageId={StageId}, AccountId={AccountId})",
+                    session.SessionId,
+                    session.IsConnected,
+                    session.IsAuthenticated,
+                    session.StageId,
+                    session.AccountId);
+            }
         }
         else
         {
@@ -607,6 +620,21 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         {
             _dispatcher?.OnPost(new DisconnectMessage(session.StageId, session.AccountId));
         }
+    }
+
+    private static bool IsExpectedDisconnectException(Exception ex)
+    {
+        return ex switch
+        {
+            OperationCanceledException => true,
+            ObjectDisposedException => true,
+            IOException ioEx when string.Equals(ioEx.Message, "Remote closed the connection.", StringComparison.Ordinal) => true,
+            WebSocketException wsEx when wsEx.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely => true,
+            SocketException socketEx when socketEx.SocketErrorCode is SocketError.ConnectionReset
+                or SocketError.OperationAborted
+                or SocketError.Shutdown => true,
+            _ => false
+        };
     }
 
     /// <summary>
@@ -645,16 +673,105 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
 
     /// <summary>
     /// 외부에서 Stage를 미리 생성할 수 있도록 API 제공.
-    /// Stage가 이미 존재하는 경우에도 성공을 반환합니다.
+    /// Stage가 이미 존재하는 경우에도 성공을 반환하며,
+    /// 미생성 상태인 경우 OnCreate/OnPostCreate 완료까지 보장합니다.
     /// </summary>
     /// <param name="stageId">생성할 Stage의 ID</param>
     /// <param name="stageType">생성할 Stage의 타입</param>
     /// <returns>Stage가 생성되었거나 이미 존재하면 true, 실패하면 false</returns>
     public bool CreateStageIfNotExists(long stageId, string stageType)
     {
+        return CreateStageIfNotExistsAsync(stageId, stageType)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    /// <summary>
+    /// 외부에서 Stage를 미리 생성할 수 있도록 API 제공.
+    /// Stage가 이미 존재하는 경우에도 성공을 반환하며,
+    /// 미생성 상태인 경우 OnCreate/OnPostCreate 완료까지 보장합니다.
+    /// </summary>
+    /// <param name="stageId">생성할 Stage의 ID</param>
+    /// <param name="stageType">생성할 Stage의 타입</param>
+    /// <param name="cancellationToken">취소 토큰</param>
+    /// <returns>Stage가 생성되었거나 이미 존재하면 true, 실패하면 false</returns>
+    public async Task<bool> CreateStageIfNotExistsAsync(
+        long stageId,
+        string stageType,
+        CancellationToken cancellationToken = default)
+    {
         if (_dispatcher == null) return false;
+
         var stage = _dispatcher.GetOrCreateStage(stageId, stageType);
-        return stage != null;
+        if (stage == null) return false;
+        if (stage.IsCreated) return true;
+
+        var stageInitLock = _stageInitializationLocks.GetOrAdd(stageId, _ => new SemaphoreSlim(1, 1));
+        await stageInitLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Double-check after acquiring lock to avoid duplicate initialization.
+            if (stage.IsCreated) return true;
+
+            using var createPacket = CPacket.Empty("CreateStage");
+            var (success, replyPacket) = await stage.CreateStage(stageType, createPacket);
+            try
+            {
+                if (!success)
+                {
+                    _logger.LogWarning(
+                        "CreateStageIfNotExists failed during OnCreate: StageId={StageId}, StageType={StageType}",
+                        stageId,
+                        stageType);
+                    return false;
+                }
+
+                try
+                {
+                    await stage.OnPostCreate();
+                }
+                catch (Exception ex)
+                {
+                    stage.MarkAsNotCreated();
+                    _logger.LogError(
+                        ex,
+                        "CreateStageIfNotExists failed during OnPostCreate: StageId={StageId}, StageType={StageType}",
+                        stageId,
+                        stageType);
+                    return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                replyPacket?.Dispose();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "CreateStageIfNotExists failed: StageId={StageId}, StageType={StageType}",
+                stageId,
+                stageType);
+            return false;
+        }
+        finally
+        {
+            stageInitLock.Release();
+            if (stage.IsCreated &&
+                _stageInitializationLocks.TryGetValue(stageId, out var currentLock) &&
+                ReferenceEquals(currentLock, stageInitLock))
+            {
+                _stageInitializationLocks.TryRemove(stageId, out _);
+            }
+        }
     }
 
     /// <summary>

@@ -30,6 +30,7 @@ public class PlayDispatcherTests : IDisposable
     {
         public IStageLink StageLink { get; }
         public bool OnCreateCalled { get; private set; }
+        public int OnPostCreateCallCount { get; private set; }
         public bool OnDestroyCalled { get; private set; }
         public int OnDispatchCount { get; private set; }
 
@@ -44,7 +45,11 @@ public class PlayDispatcherTests : IDisposable
             return Task.FromResult<(bool result, IPacket reply)>((true, CPacket.Empty("CreateReply")));
         }
 
-        public Task OnPostCreate() => Task.CompletedTask;
+        public Task OnPostCreate()
+        {
+            OnPostCreateCallCount++;
+            return Task.CompletedTask;
+        }
 
         public Task OnDestroy()
         {
@@ -88,6 +93,120 @@ public class PlayDispatcherTests : IDisposable
         public Task OnPostAuthenticate() => Task.CompletedTask;
     }
 
+    private sealed class DisposableReplyPacket : IPacket
+    {
+        private readonly IPacket _inner;
+        private readonly Action _onDispose;
+        private bool _disposed;
+
+        public DisposableReplyPacket(IPacket inner, Action onDispose)
+        {
+            _inner = inner;
+            _onDispose = onDispose;
+        }
+
+        public string MsgId => _inner.MsgId;
+        public IPayload Payload => _inner.Payload;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _inner.Dispose();
+            _onDispose();
+        }
+    }
+
+    private class DisposableReplyStage : IStage
+    {
+        internal static int OnPostCreateCallCount;
+        internal static int ReplyDisposeCallCount;
+
+        public static void ResetCounters()
+        {
+            OnPostCreateCallCount = 0;
+            ReplyDisposeCallCount = 0;
+        }
+
+        public DisposableReplyStage(IStageLink stageLink)
+        {
+            StageLink = stageLink;
+        }
+
+        public IStageLink StageLink { get; }
+
+        public Task<(bool result, IPacket reply)> OnCreate(IPacket packet)
+        {
+            var reply = new DisposableReplyPacket(
+                CPacket.Empty("CreateReply"),
+                () => ReplyDisposeCallCount++);
+            return Task.FromResult<(bool result, IPacket reply)>((true, reply));
+        }
+
+        public Task OnPostCreate()
+        {
+            OnPostCreateCallCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task OnDestroy() => Task.CompletedTask;
+        public Task<bool> OnJoinStage(IActor actor) => Task.FromResult(true);
+        public Task OnPostJoinStage(IActor actor) => Task.CompletedTask;
+        public ValueTask OnConnectionChanged(IActor actor, bool isConnected) => ValueTask.CompletedTask;
+        public Task OnDispatch(IActor actor, IPacket packet) => Task.CompletedTask;
+        public Task OnDispatch(IPacket packet) => Task.CompletedTask;
+    }
+
+    private class FailFirstPostCreateStage : IStage
+    {
+        private static int _shouldFailPostCreate;
+        internal static int OnCreateCallCount;
+        internal static int OnPostCreateCallCount;
+        internal static int ReplyDisposeCallCount;
+
+        public static void ResetCounters()
+        {
+            _shouldFailPostCreate = 1;
+            OnCreateCallCount = 0;
+            OnPostCreateCallCount = 0;
+            ReplyDisposeCallCount = 0;
+        }
+
+        public FailFirstPostCreateStage(IStageLink stageLink)
+        {
+            StageLink = stageLink;
+        }
+
+        public IStageLink StageLink { get; }
+
+        public Task<(bool result, IPacket reply)> OnCreate(IPacket packet)
+        {
+            OnCreateCallCount++;
+            var reply = new DisposableReplyPacket(
+                CPacket.Empty("CreateReply"),
+                () => ReplyDisposeCallCount++);
+            return Task.FromResult<(bool result, IPacket reply)>((true, reply));
+        }
+
+        public Task OnPostCreate()
+        {
+            OnPostCreateCallCount++;
+            if (Interlocked.Exchange(ref _shouldFailPostCreate, 0) == 1)
+            {
+                throw new InvalidOperationException("Simulated OnPostCreate failure.");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task OnDestroy() => Task.CompletedTask;
+        public Task<bool> OnJoinStage(IActor actor) => Task.FromResult(true);
+        public Task OnPostJoinStage(IActor actor) => Task.CompletedTask;
+        public ValueTask OnConnectionChanged(IActor actor, bool isConnected) => ValueTask.CompletedTask;
+        public Task OnDispatch(IActor actor, IPacket packet) => Task.CompletedTask;
+        public Task OnDispatch(IPacket packet) => Task.CompletedTask;
+    }
+
     #endregion
 
     private readonly IClientCommunicator _communicator;
@@ -111,6 +230,16 @@ public class PlayDispatcherTests : IDisposable
         _producer.Register(
             "test_stage",
             stageSender => new FakeStage(stageSender),
+            actorSender => new FakeActor(actorSender));
+
+        _producer.Register(
+            "dispose_stage",
+            stageSender => new DisposableReplyStage(stageSender),
+            actorSender => new FakeActor(actorSender));
+
+        _producer.Register(
+            "fail_first_postcreate_stage",
+            stageSender => new FailFirstPostCreateStage(stageSender),
             actorSender => new FakeActor(actorSender));
 
         var serverInfoCenter = Substitute.For<IServerInfoCenter>();
@@ -178,6 +307,43 @@ public class PlayDispatcherTests : IDisposable
 
         // Then (결과)
         _dispatcher.StageCount.Should().Be(1, "Stage가 생성되어야 함");
+    }
+
+    [Fact(DisplayName = "Post(CreateStageReq) - OnPostCreate를 호출한다")]
+    public async Task Post_CreateStageReq_CallsOnPostCreate()
+    {
+        // Given
+        const long stageId = 120;
+        var packet = CreateCreateStagePacket(stageId, "test_stage");
+
+        // When
+        _dispatcher.OnPost(new RouteMessage(packet));
+        await Task.Delay(100);
+
+        // Then
+        var stage = _dispatcher.GetStage(stageId);
+        stage.Should().NotBeNull("Stage가 생성되어야 함");
+        var fakeStage = stage!.Stage as FakeStage;
+        fakeStage.Should().NotBeNull("FakeStage 인스턴스여야 함");
+        fakeStage!.OnCreateCalled.Should().BeTrue("OnCreate가 호출되어야 함");
+        fakeStage.OnPostCreateCallCount.Should().Be(1, "OnPostCreate가 1회 호출되어야 함");
+    }
+
+    [Fact(DisplayName = "Post(CreateStageReq) - OnCreate 반환 reply 패킷을 Dispose한다")]
+    public async Task Post_CreateStageReq_DisposesOnCreateReplyPacket()
+    {
+        // Given
+        DisposableReplyStage.ResetCounters();
+        const long stageId = 121;
+        var packet = CreateCreateStagePacket(stageId, "dispose_stage");
+
+        // When
+        _dispatcher.OnPost(new RouteMessage(packet));
+        await Task.Delay(100);
+
+        // Then
+        DisposableReplyStage.OnPostCreateCallCount.Should().Be(1, "생성 후 OnPostCreate가 호출되어야 함");
+        DisposableReplyStage.ReplyDisposeCallCount.Should().Be(1, "OnCreate에서 반환된 reply 패킷은 반드시 Dispose되어야 함");
     }
 
     [Fact(DisplayName = "Post(CreateStageReq) - 이미 존재하는 StageId는 에러를 반환한다")]
@@ -301,6 +467,103 @@ public class PlayDispatcherTests : IDisposable
         dispatcher.StageCount.Should().Be(0, "Dispose 후 모든 Stage가 정리되어야 함");
     }
 
+    [Fact(DisplayName = "Post(GetOrCreateStageReq) - OnPostCreate는 최초 생성 시 한 번만 호출된다")]
+    public async Task Post_GetOrCreateStageReq_CallsOnPostCreateOnlyOnce()
+    {
+        // Given
+        const long stageId = 130;
+        var packet1 = CreateGetOrCreateStagePacket(stageId, "test_stage");
+        var packet2 = CreateGetOrCreateStagePacket(stageId, "test_stage");
+
+        // When
+        _dispatcher.OnPost(new RouteMessage(packet1));
+        await Task.Delay(100);
+        _dispatcher.OnPost(new RouteMessage(packet2));
+        await Task.Delay(100);
+
+        // Then
+        var stage = _dispatcher.GetStage(stageId);
+        stage.Should().NotBeNull("Stage가 존재해야 함");
+        var fakeStage = stage!.Stage as FakeStage;
+        fakeStage.Should().NotBeNull("FakeStage 인스턴스여야 함");
+        fakeStage!.OnPostCreateCallCount.Should().Be(1, "이미 생성된 Stage에는 OnPostCreate가 다시 호출되면 안 됨");
+    }
+
+    [Fact(DisplayName = "Post(GetOrCreateStageReq) - OnCreate 반환 reply 패킷을 Dispose한다")]
+    public async Task Post_GetOrCreateStageReq_DisposesOnCreateReplyPacket()
+    {
+        // Given
+        DisposableReplyStage.ResetCounters();
+        const long stageId = 131;
+        var packet1 = CreateGetOrCreateStagePacket(stageId, "dispose_stage");
+        var packet2 = CreateGetOrCreateStagePacket(stageId, "dispose_stage");
+
+        // When
+        _dispatcher.OnPost(new RouteMessage(packet1));
+        await Task.Delay(100);
+        _dispatcher.OnPost(new RouteMessage(packet2));
+        await Task.Delay(100);
+
+        // Then
+        DisposableReplyStage.OnPostCreateCallCount.Should().Be(1, "최초 생성에서만 OnPostCreate가 호출되어야 함");
+        DisposableReplyStage.ReplyDisposeCallCount.Should().Be(1, "최초 생성 시 반환된 reply 패킷은 Dispose되어야 함");
+    }
+
+    [Fact(DisplayName = "Post(GetOrCreateStageReq) - OnPostCreate 실패 후 재시도 시 생성 완료된다")]
+    public async Task Post_GetOrCreateStageReq_OnPostCreateFailure_AllowsRetry()
+    {
+        // Given
+        FailFirstPostCreateStage.ResetCounters();
+        const long stageId = 132;
+        var packet1 = CreateGetOrCreateStagePacket(stageId, "fail_first_postcreate_stage");
+        var packet2 = CreateGetOrCreateStagePacket(stageId, "fail_first_postcreate_stage");
+
+        // When
+        _dispatcher.OnPost(new RouteMessage(packet1));
+        await Task.Delay(100);
+        var stageAfterFirstAttempt = _dispatcher.GetStage(stageId);
+        var isCreatedAfterFirstAttempt = stageAfterFirstAttempt?.IsCreated;
+        _dispatcher.OnPost(new RouteMessage(packet2));
+        await Task.Delay(100);
+        var stageAfterSecondAttempt = _dispatcher.GetStage(stageId);
+
+        // Then
+        stageAfterFirstAttempt.Should().NotBeNull();
+        isCreatedAfterFirstAttempt.Should().BeFalse("OnPostCreate 실패 시 생성 상태가 복구되어야 함");
+        stageAfterSecondAttempt.Should().NotBeNull();
+        stageAfterSecondAttempt!.IsCreated.Should().BeTrue("재시도 시 OnPostCreate까지 완료되어야 함");
+        FailFirstPostCreateStage.OnCreateCallCount.Should().Be(2, "첫 실패 후 재시도 시 OnCreate가 다시 호출되어야 함");
+        FailFirstPostCreateStage.OnPostCreateCallCount.Should().Be(2, "OnPostCreate는 실패/성공 각각 1회씩 호출되어야 함");
+        FailFirstPostCreateStage.ReplyDisposeCallCount.Should().Be(2, "실패/성공 경로 모두 reply 패킷을 Dispose해야 함");
+    }
+
+    [Fact(DisplayName = "Post(CreateStageReq) - OnPostCreate 실패 후 동일 StageId 재시도 시 성공한다")]
+    public async Task Post_CreateStageReq_OnPostCreateFailure_AllowsRetry()
+    {
+        // Given
+        FailFirstPostCreateStage.ResetCounters();
+        const long stageId = 133;
+        var packet1 = CreateCreateStagePacket(stageId, "fail_first_postcreate_stage");
+        var packet2 = CreateCreateStagePacket(stageId, "fail_first_postcreate_stage");
+
+        // When
+        _dispatcher.OnPost(new RouteMessage(packet1));
+        await Task.Delay(100);
+        var stageAfterFirstAttempt = _dispatcher.GetStage(stageId);
+        var isCreatedAfterFirstAttempt = stageAfterFirstAttempt?.IsCreated;
+        _dispatcher.OnPost(new RouteMessage(packet2));
+        await Task.Delay(100);
+        var stageAfterSecondAttempt = _dispatcher.GetStage(stageId);
+
+        // Then
+        stageAfterFirstAttempt.Should().NotBeNull();
+        isCreatedAfterFirstAttempt.Should().BeFalse("OnPostCreate 실패 시 생성 상태가 복구되어야 함");
+        stageAfterSecondAttempt.Should().NotBeNull();
+        stageAfterSecondAttempt!.IsCreated.Should().BeTrue("동일 StageId로 재요청 시 생성이 완료되어야 함");
+        FailFirstPostCreateStage.OnCreateCallCount.Should().Be(2, "실패 후 재시도 시 OnCreate가 다시 호출되어야 함");
+        FailFirstPostCreateStage.OnPostCreateCallCount.Should().Be(2, "실패/성공 경로 모두 OnPostCreate가 호출되어야 함");
+    }
+
     [Fact(DisplayName = "여러 Stage 생성 - 각각 독립적으로 관리된다")]
     public async Task CreateMultipleStages_AllManaged()
     {
@@ -347,6 +610,25 @@ public class PlayDispatcherTests : IDisposable
         };
 
         return RoutePacket.Of(header, Array.Empty<byte>());
+    }
+
+    private static RoutePacket CreateGetOrCreateStagePacket(long stageId, string stageType)
+    {
+        var req = new GetOrCreateStageReq
+        {
+            StageType = stageType,
+            CreatePayloadId = "Init"
+        };
+
+        var header = new RouteHeader
+        {
+            ServiceId = 1,
+            MsgId = nameof(GetOrCreateStageReq),
+            StageId = stageId,
+            From = "test:1"
+        };
+
+        return RoutePacket.Of(header, req.ToByteArray());
     }
 
     #endregion

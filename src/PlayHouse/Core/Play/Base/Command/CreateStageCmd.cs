@@ -21,38 +21,65 @@ internal sealed class CreateStageCmd(ILogger logger) : IBaseStageCmd
             req.StageType, req.PayloadId);
 
         // Zero-copy: use ByteString.Memory directly
-        var contentPacket = CPacket.Of(req.PayloadId, new MemoryPayload(req.Payload.Memory));
+        using var contentPacket = CPacket.Of(req.PayloadId, new MemoryPayload(req.Payload.Memory));
 
-        var (success, replyPacket) = await baseStage.CreateStage(req.StageType, contentPacket);
-
-        if (!success)
+        IPacket? replyPacket = null;
+        try
         {
-            logger.LogWarning("Stage.OnCreate failed for StageId={StageId}", baseStage.StageId);
-            var failRes = new CreateStageRes
+            var (success, createReplyPacket) = await baseStage.CreateStage(req.StageType, contentPacket);
+            replyPacket = createReplyPacket;
+
+            if (!success)
             {
-                Result = false,
+                logger.LogWarning("Stage.OnCreate failed for StageId={StageId}", baseStage.StageId);
+                var failRes = new CreateStageRes
+                {
+                    Result = false,
+                    PayloadId = replyPacket?.MsgId ?? "",
+                    Payload = replyPacket != null
+                        ? ByteString.CopyFrom(replyPacket.Payload.DataSpan)
+                        : ByteString.Empty
+                };
+                baseStage.Reply(CPacket.Of(failRes));
+                return;
+            }
+
+            try
+            {
+                await baseStage.OnPostCreate();
+            }
+            catch (Exception ex)
+            {
+                baseStage.MarkAsNotCreated();
+                logger.LogError(ex, "Stage.OnPostCreate failed for StageId={StageId}", baseStage.StageId);
+                var failRes = new CreateStageRes
+                {
+                    Result = false,
+                    PayloadId = replyPacket?.MsgId ?? "",
+                    Payload = replyPacket != null
+                        ? ByteString.CopyFrom(replyPacket.Payload.DataSpan)
+                        : ByteString.Empty
+                };
+                baseStage.Reply(CPacket.Of(failRes));
+                return;
+            }
+
+            var successRes = new CreateStageRes
+            {
+                Result = true,
                 PayloadId = replyPacket?.MsgId ?? "",
                 Payload = replyPacket != null
                     ? ByteString.CopyFrom(replyPacket.Payload.DataSpan)
                     : ByteString.Empty
             };
-            baseStage.Reply(CPacket.Of(failRes));
-            return;
+            baseStage.Reply(CPacket.Of(successRes));
+
+            logger.LogInformation("Stage created: StageId={StageId}, StageType={StageType}",
+                baseStage.StageId, req.StageType);
         }
-
-        await baseStage.OnPostCreate();
-
-        var successRes = new CreateStageRes
+        finally
         {
-            Result = true,
-            PayloadId = replyPacket?.MsgId ?? "",
-            Payload = replyPacket != null
-                ? ByteString.CopyFrom(replyPacket.Payload.DataSpan)
-                : ByteString.Empty
-        };
-        baseStage.Reply(CPacket.Of(successRes));
-
-        logger.LogInformation("Stage created: StageId={StageId}, StageType={StageType}",
-            baseStage.StageId, req.StageType);
+            replyPacket?.Dispose();
+        }
     }
 }

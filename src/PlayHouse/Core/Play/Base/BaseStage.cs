@@ -432,6 +432,7 @@ internal sealed class BaseStage(
 
     public async Task OnPostCreate() => await Stage.OnPostCreate();
     public void MarkAsCreated() => IsCreated = true;
+    public void MarkAsNotCreated() => IsCreated = false;
     internal void PostDestroy()
     {
         _mailbox.Enqueue(new StageMessage.DestroyMessage() { Stage = this });

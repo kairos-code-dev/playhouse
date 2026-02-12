@@ -126,8 +126,7 @@ internal sealed class XActorLink : IActorLink
                     packet.Payload.DataSpan);
                 return;
             }
-            // Session exists but disconnected - skip sending
-            Console.WriteLine($"[XActorLink] SendToClient skipped: session {_transportSession.SessionId} disconnected for stage {_baseStage?.StageId ?? 0}");
+            // Session exists but disconnected - skip sending.
             return;
         }
 

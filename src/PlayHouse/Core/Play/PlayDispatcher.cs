@@ -319,11 +319,26 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
 
             if (!created)
             {
-                // Stage already exists - this is an error for CreateStage
-                _logger.LogWarning("Stage {StageId} already exists", stageId);
-                SendErrorReply(packet, (ushort)ErrorCode.StageAlreadyExists);
-                packet.Dispose();
-                return;
+                if (baseStage.IsCreated)
+                {
+                    // Stage already exists and initialized - this is an error for CreateStage
+                    _logger.LogWarning("Stage {StageId} already exists", stageId);
+                    SendErrorReply(packet, (ushort)ErrorCode.StageAlreadyExists);
+                    packet.Dispose();
+                    return;
+                }
+
+                if (!string.Equals(baseStage.StageType, req.StageType, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "Stage {StageId} exists with different type. Existing={ExistingType}, Requested={RequestedType}",
+                        stageId,
+                        baseStage.StageType,
+                        req.StageType);
+                    SendErrorReply(packet, (ushort)ErrorCode.InvalidStageType);
+                    packet.Dispose();
+                    return;
+                }
             }
 
             // Post create request to Stage event loop

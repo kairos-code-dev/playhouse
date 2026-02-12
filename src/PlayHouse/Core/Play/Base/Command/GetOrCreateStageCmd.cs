@@ -22,46 +22,74 @@ internal sealed class GetOrCreateStageCmd(ILogger logger) : IBaseStageCmd
         bool isCreated = false;
         IPacket? onCreateReply = null;
 
-        // Stage가 아직 생성되지 않았으면 생성
-        if (!baseStage.IsCreated)
+        try
         {
-            // Zero-copy: use ByteString.Memory directly
-            var createPacket = CPacket.Of(req.CreatePayloadId, new MemoryPayload(req.CreatePayload.Memory));
-            var (createSuccess, createReply) = await baseStage.CreateStage(req.StageType, createPacket);
-
-            if (!createSuccess)
+            // Stage가 아직 생성되지 않았으면 생성
+            if (!baseStage.IsCreated)
             {
-                var failRes = new GetOrCreateStageRes
+                // Zero-copy: use ByteString.Memory directly
+                using var createPacket = CPacket.Of(req.CreatePayloadId, new MemoryPayload(req.CreatePayload.Memory));
+                var (createSuccess, createReply) = await baseStage.CreateStage(req.StageType, createPacket);
+
+                onCreateReply = createReply;
+
+                if (!createSuccess)
                 {
-                    Result = false,
-                    IsCreated = false,
-                    PayloadId = createReply?.MsgId ?? "",
-                    Payload = createReply != null
-                        ? ByteString.CopyFrom(createReply.Payload.DataSpan)
-                        : ByteString.Empty
-                };
-                baseStage.Reply(CPacket.Of(failRes));
-                return;
+                    var failRes = new GetOrCreateStageRes
+                    {
+                        Result = false,
+                        IsCreated = false,
+                        PayloadId = createReply?.MsgId ?? "",
+                        Payload = createReply != null
+                            ? ByteString.CopyFrom(createReply.Payload.DataSpan)
+                            : ByteString.Empty
+                    };
+                    baseStage.Reply(CPacket.Of(failRes));
+                    return;
+                }
+
+                try
+                {
+                    await baseStage.OnPostCreate();
+                }
+                catch (Exception ex)
+                {
+                    baseStage.MarkAsNotCreated();
+                    logger.LogError(ex, "Stage.OnPostCreate failed for StageId={StageId}", baseStage.StageId);
+                    var failRes = new GetOrCreateStageRes
+                    {
+                        Result = false,
+                        IsCreated = false,
+                        PayloadId = createReply?.MsgId ?? "",
+                        Payload = createReply != null
+                            ? ByteString.CopyFrom(createReply.Payload.DataSpan)
+                            : ByteString.Empty
+                    };
+                    baseStage.Reply(CPacket.Of(failRes));
+                    return;
+                }
+
+                isCreated = true;
             }
 
-            await baseStage.OnPostCreate();
-            isCreated = true;
-            onCreateReply = createReply;
+            // 성공 응답: 새로 생성된 경우 OnCreate reply 반환, 기존 stage인 경우 빈 응답
+            var successRes = new GetOrCreateStageRes
+            {
+                Result = true,
+                IsCreated = isCreated,
+                PayloadId = onCreateReply?.MsgId ?? "",
+                Payload = onCreateReply != null
+                    ? ByteString.CopyFrom(onCreateReply.Payload.DataSpan)
+                    : ByteString.Empty
+            };
+            baseStage.Reply(CPacket.Of(successRes));
+
+            logger.LogInformation("GetOrCreateStage success: StageId={StageId}, IsCreated={IsCreated}",
+                baseStage.StageId, isCreated);
         }
-
-        // 성공 응답: 새로 생성된 경우 OnCreate reply 반환, 기존 stage인 경우 빈 응답
-        var successRes = new GetOrCreateStageRes
+        finally
         {
-            Result = true,
-            IsCreated = isCreated,
-            PayloadId = onCreateReply?.MsgId ?? "",
-            Payload = onCreateReply != null
-                ? ByteString.CopyFrom(onCreateReply.Payload.DataSpan)
-                : ByteString.Empty
-        };
-        baseStage.Reply(CPacket.Of(successRes));
-
-        logger.LogInformation("GetOrCreateStage success: StageId={StageId}, IsCreated={IsCreated}",
-            baseStage.StageId, isCreated);
+            onCreateReply?.Dispose();
+        }
     }
 }
