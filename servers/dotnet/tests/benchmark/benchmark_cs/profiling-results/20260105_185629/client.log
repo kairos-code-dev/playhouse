@@ -1,54 +1,0 @@
-[18:56:36 INF] ================================================================================
-[18:56:36 INF] PlayHouse Benchmark Client
-[18:56:36 INF] ================================================================================
-[18:56:36 INF] Server: 127.0.0.1:16110
-[18:56:36 INF] HTTP API: 127.0.0.1:5080
-[18:56:36 INF] Mode: Send
-[18:56:36 INF] Connections: 100
-[18:56:36 INF] Duration: 60 seconds
-[18:56:36 INF] Message size: 1,024 bytes
-[18:56:36 INF] Response sizes: 1,024B
-[18:56:36 INF] Output: /home/ulalax/project/ulalax/playhouse/playhouse-net/tests/benchmark_cs/benchmark-results
-[18:56:36 INF] ================================================================================
-[18:56:36 INF] Resetting server metrics...
-[18:56:37 INF] [18:56:37] Starting benchmark...
-[18:56:37 INF]   Mode: Send
-[18:56:37 INF]   Connections: 100
-[18:56:37 INF]   Duration: 60 seconds
-[18:56:37 INF]   Message size: 1,024 bytes
-  Connecting: 15/100      Connecting: 17/100      Connecting: 17/100      Connecting: 17/100      Connecting: 20/100      Connecting: 20/100      Connecting: 21/100      Connecting: 21/100      Connecting: 21/100      Connecting: 21/100      Connecting: 21/100      Connecting: 22/100      Connecting: 24/100      Connecting: 26/100      Connecting: 27/100      Connecting: 28/100      Connecting: 28/100      Connecting: 32/100      Connecting: 32/100      Connecting: 33/100      Connecting: 34/100      Connecting: 35/100      Connecting: 37/100      Connecting: 40/100      Connecting: 41/100      Connecting: 43/100      Connecting: 45/100      Connecting: 47/100      Connecting: 48/100      Connecting: 49/100      Connecting: 50/100      Connecting: 51/100      Connecting: 52/100      Connecting: 53/100      Connecting: 54/100      Connecting: 55/100      Connecting: 56/100      Connecting: 57/100      Connecting: 58/100      Connecting: 59/100      Connecting: 60/100      Connecting: 61/100      Connecting: 62/100      Connecting: 63/100      Connecting: 64/100      Connecting: 65/100      Connecting: 67/100      Connecting: 68/100      Connecting: 69/100      Connecting: 70/100      Connecting: 71/100      Connecting: 72/100      Connecting: 73/100      Connecting: 74/100      Connecting: 75/100      Connecting: 76/100      Connecting: 77/100      Connecting: 78/100      Connecting: 79/100      Connecting: 80/100      Connecting: 81/100      Connecting: 82/100      Connecting: 83/100      Connecting: 84/100      Connecting: 84/100      Connecting: 86/100      Connecting: 87/100      Connecting: 87/100      Connecting: 89/100      Connecting: 90/100      Connecting: 91/100      Connecting: 91/100      Connecting: 92/100      Connecting: 93/100      Connecting: 94/100      Connecting: 95/100      Connecting: 96/100      Connecting: 97/100      Connecting: 98/100      Connecting: 99/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100      Connecting: 100/100    
-[18:56:37 INF]   All connections ready. Starting warmup (3 seconds)...
-[18:56:39 INF]   Warmup completed. Starting actual benchmark (60 seconds)...
-
-[18:57:40 INF]   Connected: 100/100 (failed: 0)
-[18:57:40 INF] [18:57:40] Benchmark completed.
-[18:57:40 INF] Waiting for server to cleanup stages and stabilize metrics...
-[18:57:50 INF] 
-[18:57:50 INF] ================================================================================
-[18:57:50 INF] Benchmark Results Summary
-[18:57:50 INF] ================================================================================
-[18:57:50 INF] Config: 100 CCU x 60s, Request: 1,024B, Mode: Send
-[18:57:50 INF] 
-[18:57:50 INF] RespSize |   Time |   Srv TPS |  Srv P99 |  Srv Mem |     Srv GC |  Cli RTT |   Cli TPS |  Cli Mem |     Cli GC
-[18:57:50 INF] -------- | ------ | --------- | -------- | -------- | ---------- | -------- | --------- | -------- | ----------
-[18:57:50 INF]   1,024B | 63.88s |  252,057/s |   0.00ms | 33736.0MB | 2380/2338/77 | 959.22ms |  244,981/s | 1401974.0MB | 95104/55720/15326
-[18:57:50 INF] 
-[18:57:50 INF] --------------------------------------------------------------------------------
-[18:57:50 INF] [Response Size: 1,024 bytes]
-[18:57:50 INF]   Elapsed: 63.88s
-[18:57:50 INF]   Server:
-[18:57:50 INF]     Processed   : 17,898,225 messages
-[18:57:50 INF]     Throughput  : 252,057 msg/s (492.30 MB/s)
-[18:57:50 INF]     Latency     : Mean=0.00ms, P50=0.00ms, P95=0.00ms, P99=0.00ms
-[18:57:50 INF]     Memory      : 33735.98 MB, GC: Gen0=2380, Gen1=2338, Gen2=77
-[18:57:50 INF]   Client:
-[18:57:50 INF]     Sent/Recv   : 17,167,609 / 17,267,578 messages
-[18:57:50 INF]     RTT Latency : Mean=368.43ms, P50=336.55ms, P95=719.25ms, P99=959.22ms
-[18:57:50 INF]     Throughput  : 244,981 msg/s
-[18:57:50 INF]     Memory      : 1401974.00 MB, GC: Gen0=95104, Gen1=55720, Gen2=15326
-[18:57:50 INF] ================================================================================
-[18:57:50 INF] 
-[18:57:50 INF] Results saved to:
-[18:57:50 INF]   Log:  benchmark-results/benchmark_20260105_185635.log
-[18:57:50 INF]   JSON: benchmark-results/benchmark_20260105_185635.json
-[18:57:50 INF]   CSV:  benchmark-results/benchmark_summary.csv

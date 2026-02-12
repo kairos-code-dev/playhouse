@@ -75,6 +75,12 @@ tests/benchmark/benchmark_cs/logs/
 tests/benchmark/benchmark_cs/profiling-results/
 tests/benchmark/benchmark_ss/benchmark-results/
 tests/benchmark/benchmark_ss/logs/
+benchmark-results/
+servers/dotnet/benchmark-results/
+tests/benchmark/benchmark_cs/PlayHouse.Benchmark.Client/benchmark-results/
+servers/dotnet/tests/benchmark/benchmark_cs/PlayHouse.Benchmark.Client/benchmark-results/
+servers/dotnet/tests/benchmark/benchmark_cs/profiling-results/
+servers/dotnet/tests/benchmark/benchmark_cs/logs/
 
 # C++ build artifacts
 tests/benchmark_echo/cpp_client/build/

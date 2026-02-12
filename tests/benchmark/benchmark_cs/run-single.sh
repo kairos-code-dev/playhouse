@@ -30,6 +30,7 @@ set -e
 # 스크립트 디렉토리 기준 경로 설정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+OUTPUT_DIR="$SCRIPT_DIR/benchmark-results"
 
 # 기본값 설정
 MODE=""
@@ -137,6 +138,7 @@ echo "  Duration: ${DURATION}s"
 echo "  Warmup: ${WARMUP}s"
 echo "  Max in-flight: $INFLIGHT"
 echo "  Pool size: $MIN_POOL_SIZE ~ $MAX_POOL_SIZE"
+echo "  Output dir: $OUTPUT_DIR"
 echo "================================================================================"
 echo ""
 
@@ -191,7 +193,8 @@ dotnet run --project "$SCRIPT_DIR/PlayHouse.Benchmark.Client/PlayHouse.Benchmark
     --response-size $SIZE \
     --http-port $HTTP_PORT \
     --inflight $INFLIGHT \
-    --warmup $WARMUP
+    --warmup $WARMUP \
+    --output-dir "$OUTPUT_DIR"
 
 # 정리
 echo ""
