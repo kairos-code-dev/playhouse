@@ -1,0 +1,45 @@
+{
+  "Timestamp": "2026-02-12 15:30:54",
+  "Label": "",
+  "Config": {
+    "Connections": 10000,
+    "MessagesPerConnection": null,
+    "DurationSeconds": 10,
+    "IsTimeBased": true,
+    "TotalMessages": null,
+    "RequestSizeBytes": 64,
+    "Mode": "Send"
+  },
+  "Results": [
+    {
+      "ResponseSizeBytes": 64,
+      "TotalElapsedSeconds": 15.6838526,
+      "Server": {
+        "ProcessedMessages": 9154561,
+        "ThroughputMsgPerSec": 464818.26699194574,
+        "ThroughputMBPerSec": 56.74051110741525,
+        "LatencyMeanMs": 0,
+        "LatencyP50Ms": 0,
+        "LatencyP95Ms": 0,
+        "LatencyP99Ms": 0,
+        "MemoryAllocatedMB": 6475.318138122559,
+        "GcGen0": 320,
+        "GcGen1": 63,
+        "GcGen2": 1
+      },
+      "Client": {
+        "SentMessages": 6966839,
+        "ReceivedMessages": 6966839,
+        "RttLatencyMeanMs": 427.0296080375407,
+        "RttLatencyP50Ms": 470.722782,
+        "RttLatencyP95Ms": 741.844737,
+        "RttLatencyP99Ms": 819.597071,
+        "ThroughputMsgPerSec": 488324.56414062873,
+        "MemoryAllocatedMB": 3040.4806213378906,
+        "GcGen0": 186,
+        "GcGen1": 78,
+        "GcGen2": 2
+      }
+    }
+  ]
+}

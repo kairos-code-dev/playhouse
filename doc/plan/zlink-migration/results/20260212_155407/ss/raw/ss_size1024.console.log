@@ -1,0 +1,74 @@
+================================================================================
+PlayHouse S2S Benchmark - Single Test
+================================================================================
+Configuration:
+  Comm-mode: send
+  Payload size: 1024 bytes (Echo: request=response)
+  Connections: 10000
+  Duration: 10s
+  Warmup: 3s
+  Max in-flight: 10
+  Pool size: 100 ~ 1000
+================================================================================
+
+[1/4] Building projects...
+MSBuild version 17.8.45+2a7a854c1 for .NET
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.89
+MSBuild version 17.8.45+2a7a854c1 for .NET
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.85
+MSBuild version 17.8.45+2a7a854c1 for .NET
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.76
+[1/4] Build completed
+[2/4] Cleaning up existing servers...
+[3/4] Starting S2S benchmark servers...
+  Starting PlayServer (TCP: 16110, ZMQ: 16100, HTTP: 5080)...
+  Starting ApiServer (ZMQ: 16201, HTTP: 5081)...
+[3/4] Servers started (PlayServer PID: 66570, ApiServer PID: 66687)
+[4/4] Running S2S benchmark...
+
+[15:57:15 INF] >>> S2S Pure Benchmark: Send Mode, 10000 Connections, BatchSize=10 <<<
+[15:57:15 INF] Resetting server metrics...
+[15:57:16 INF] Phase 1: Connecting and authenticating 10000 clients...
+[15:57:17 INF] Phase 1 completed: 10000/10000 connected
+[15:57:17 INF] Warmup Phase: Running warmup for 3s...
+[15:57:21 INF] Warmup Phase completed. Resetting server metrics...
+[15:57:22 INF] Phase 2: Starting benchmark for all ccu...
+[15:57:32 INF] Phase 2 completed: Benchmark finished.
+[15:57:32 INF] Waiting for server metrics to stabilize...
+[15:57:34 INF] ================================================================================
+[15:57:34 INF] S2S BENCHMARK RESULT
+[15:57:34 INF] ================================================================================
+[15:57:34 INF] S2S Throughput:            0 msg/s
+[15:57:34 INF] Server Avg CPU:            18.81%
+[15:57:34 INF] Server Memory Alloc:       5750.67 MB
+[15:57:34 INF] Server GC (0/1/2):         6/4/4
+[15:57:34 INF] Server Latency (Mean):     0.00ms
+[15:57:34 INF] Server Latency (P50):      0.00ms
+[15:57:34 INF] Server Latency (P95):      0.00ms
+[15:57:34 INF] Server Latency (P99):      0.00ms
+[15:57:34 INF] Total S2S Messages:        0
+[15:57:34 INF] Total Test Time:           10.61s
+[15:57:34 INF] ================================================================================
+
+Cleaning up...
+tests/benchmark/benchmark_ss/run-single.sh: line 232: 66570 Killed                  dotnet run --project "$SCRIPT_DIR/PlayHouse.Benchmark.SS.PlayServer/PlayHouse.Benchmark.SS.PlayServer.csproj" -c Release -- --tcp-port $TCP_PORT --http-port $HTTP_PORT --zmq-port $ZMQ_PORT --min-pool-size $MIN_POOL_SIZE --max-pool-size $MAX_POOL_SIZE --peers "api-1=tcp://127.0.0.1:$API_ZMQ_PORT" > /tmp/ss-playserver.log 2>&1
+tests/benchmark/benchmark_ss/run-single.sh: line 232: 66687 Killed                  dotnet run --project "$SCRIPT_DIR/PlayHouse.Benchmark.SS.ApiServer/PlayHouse.Benchmark.SS.ApiServer.csproj" -c Release -- --zmq-port $API_ZMQ_PORT --http-port $API_HTTP_PORT --min-pool-size $MIN_POOL_SIZE --max-pool-size $MAX_POOL_SIZE --diagnostic-level $DIAG_LEVEL --peers "play-1=tcp://127.0.0.1:$ZMQ_PORT" > /tmp/ss-apiserver.log 2>&1
+
+================================================================================
+S2S Benchmark completed
+================================================================================

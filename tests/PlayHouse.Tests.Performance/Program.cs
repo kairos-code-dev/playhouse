@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using Net.Zmq;
+using Zlink;
 using Google.Protobuf;
 using PlayHouse.Runtime.Proto;
 
@@ -22,11 +22,11 @@ public class Program
         using var r1 = new Socket(context, SocketType.Router);
         using var r2 = new Socket(context, SocketType.Router);
 
-        r1.SetOption(SocketOption.Sndhwm, 0); r1.SetOption(SocketOption.Rcvhwm, 0);
-        r2.SetOption(SocketOption.Sndhwm, 0); r2.SetOption(SocketOption.Rcvhwm, 0);
+        r1.SetOption(SocketOption.SndHwm, 0); r1.SetOption(SocketOption.RcvHwm, 0);
+        r2.SetOption(SocketOption.SndHwm, 0); r2.SetOption(SocketOption.RcvHwm, 0);
 
         byte[] r2Id = Encoding.UTF8.GetBytes("R2");
-        r2.SetOption(SocketOption.Routing_Id, r2Id);
+        r2.SetOption(SocketOption.RoutingId, r2Id);
         
         r1.Bind("tcp://127.0.0.1:20050");
         r2.Connect("tcp://127.0.0.1:20050");
@@ -65,9 +65,9 @@ public class Program
             byte[] b2 = new byte[256]; // Header
             byte[] b3 = new byte[65536]; // Payload
             for (int n = 0; n < count; n++) {
-                r2.Recv(b1);
-                int hLen = r2.Recv(b2);
-                r2.Recv(b3);
+                r2.Receive(b1);
+                int hLen = r2.Receive(b2);
+                r2.Receive(b3);
                 
                 // Simulate minimal parsing
                 // var h = RouteHeader.Parser.ParseFrom(b2.AsSpan(0, hLen));

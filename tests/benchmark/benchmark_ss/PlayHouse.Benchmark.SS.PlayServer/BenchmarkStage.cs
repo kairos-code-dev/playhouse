@@ -13,6 +13,16 @@ namespace PlayHouse.Benchmark.SS.PlayServer;
 
 public class BenchmarkStage : IStage
 {
+    private static long _stagePacketLogCount;
+    private static long _dequeueMissLogCount;
+    private static long _dequeueHitLogCount;
+    private static long _phase2SendBatchLogCount;
+    private static long _phase2DequeueHitLogCount;
+    private static long _phase2DequeueMissLogCount;
+    private static long _phase2DequeueHitTotalCount;
+    private static long _phase2DequeueMissTotalCount;
+    private static long _triggerLogCount;
+    private static long _phase2TriggerLogCount;
     private readonly ILogger<BenchmarkStage> _logger;
     private readonly ConcurrentQueue<long> _latencyQueue = new();
     private long _metricsGeneration = -1;
@@ -44,12 +54,83 @@ public class BenchmarkStage : IStage
 
     public Task OnDispatch(IPacket packet)
     {
+        var logCount = Interlocked.Increment(ref _stagePacketLogCount);
+        if (logCount <= 20)
+        {
+            _logger.LogInformation("Stage packet recv: msgId={MsgId}", packet.MsgId);
+        }
+
         // Send 모드 응답 처리 (SendToStage로 온 메시지)
         if (packet.MsgId == "SSEchoReply")
         {
             if (_latencyQueue.TryDequeue(out var start))
             {
                 ServerMetricsCollector.Instance.RecordMessage(Stopwatch.GetTimestamp() - start, packet.Payload.Length);
+                var hitCount = Interlocked.Increment(ref _dequeueHitLogCount);
+                if (hitCount <= 20)
+                {
+                    _logger.LogInformation(
+                        "SSEchoReply dequeue hit: stage={StageId}, gen={Generation}, queueCount={QueueCount}",
+                        StageLink.StageId,
+                        ServerMetricsCollector.Instance.Generation,
+                        _latencyQueue.Count);
+                }
+
+                if (ServerMetricsCollector.Instance.Generation >= 2)
+                {
+                    var phase2HitTotalCount = Interlocked.Increment(ref _phase2DequeueHitTotalCount);
+                    var phase2HitCount = Interlocked.Increment(ref _phase2DequeueHitLogCount);
+                    if (phase2HitCount <= 20)
+                    {
+                        _logger.LogInformation(
+                            "SSEchoReply phase2 hit: stage={StageId}, gen={Generation}, queueCount={QueueCount}",
+                            StageLink.StageId,
+                            ServerMetricsCollector.Instance.Generation,
+                            _latencyQueue.Count);
+                    }
+
+                    if (phase2HitTotalCount % 5000 == 0)
+                    {
+                        _logger.LogInformation(
+                            "SSEchoReply phase2 summary: hit={Hit}, miss={Miss}",
+                            phase2HitTotalCount,
+                            Interlocked.Read(ref _phase2DequeueMissTotalCount));
+                    }
+                }
+            }
+            else
+            {
+                var missCount = Interlocked.Increment(ref _dequeueMissLogCount);
+                if (missCount <= 20)
+                {
+                    _logger.LogWarning(
+                        "SSEchoReply dequeue miss: stage={StageId}, gen={Generation}, queueCount={QueueCount}",
+                        StageLink.StageId,
+                        ServerMetricsCollector.Instance.Generation,
+                        _latencyQueue.Count);
+                }
+
+                if (ServerMetricsCollector.Instance.Generation >= 2)
+                {
+                    var phase2MissTotalCount = Interlocked.Increment(ref _phase2DequeueMissTotalCount);
+                    var phase2MissCount = Interlocked.Increment(ref _phase2DequeueMissLogCount);
+                    if (phase2MissCount <= 20)
+                    {
+                        _logger.LogWarning(
+                            "SSEchoReply phase2 miss: stage={StageId}, gen={Generation}, queueCount={QueueCount}",
+                            StageLink.StageId,
+                            ServerMetricsCollector.Instance.Generation,
+                            _latencyQueue.Count);
+                    }
+
+                    if (phase2MissTotalCount % 5000 == 0)
+                    {
+                        _logger.LogInformation(
+                            "SSEchoReply phase2 summary: hit={Hit}, miss={Miss}",
+                            Interlocked.Read(ref _phase2DequeueHitTotalCount),
+                            phase2MissTotalCount);
+                    }
+                }
             }
         }
         return Task.CompletedTask;
@@ -66,6 +147,31 @@ public class BenchmarkStage : IStage
         {
             _latencyQueue.Clear();
             Interlocked.Exchange(ref _metricsGeneration, generation);
+        }
+
+        var triggerLogCount = Interlocked.Increment(ref _triggerLogCount);
+        if (triggerLogCount <= 30)
+        {
+            _logger.LogInformation(
+                "HandleTrigger: stage={StageId}, gen={Generation}, mode={Mode}, batch={Batch}, queue={QueueCount}",
+                StageLink.StageId,
+                generation,
+                req.CommMode,
+                req.BatchSize,
+                _latencyQueue.Count);
+        }
+        if (generation >= 2)
+        {
+            var phase2TriggerLogCount = Interlocked.Increment(ref _phase2TriggerLogCount);
+            if (phase2TriggerLogCount <= 30)
+            {
+                _logger.LogInformation(
+                    "HandleTrigger phase2: stage={StageId}, mode={Mode}, batch={Batch}, queue={QueueCount}",
+                    StageLink.StageId,
+                    req.CommMode,
+                    req.BatchSize,
+                    _latencyQueue.Count);
+            }
         }
 
         var echoReq = new SSEchoRequest { Payload = req.Payload };
@@ -131,6 +237,19 @@ public class BenchmarkStage : IStage
 
     private void RunSendBatch(int count, byte[] data)
     {
+        if (ServerMetricsCollector.Instance.Generation >= 2)
+        {
+            var phase2SendLogCount = Interlocked.Increment(ref _phase2SendBatchLogCount);
+            if (phase2SendLogCount <= 20)
+            {
+                _logger.LogInformation(
+                    "RunSendBatch phase2: stage={StageId}, count={Count}, queueBefore={QueueCount}",
+                    StageLink.StageId,
+                    count,
+                    _latencyQueue.Count);
+            }
+        }
+
         for (int i = 0; i < count; i++)
         {
             // 전송 시각 기록

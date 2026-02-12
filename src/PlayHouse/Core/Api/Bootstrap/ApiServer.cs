@@ -56,7 +56,9 @@ public sealed class ApiServer : IApiServerControl, IAsyncDisposable, ICommunicat
             options.ServiceId,
             options.ServerId,
             options.BindEndpoint,
-            options.RequestTimeoutMs);
+            options.RequestTimeoutMs,
+            options.SendHighWatermark,
+            options.ReceiveHighWatermark);
 
         // 모든 필드를 생성자에서 초기화
         _requestCache = new RequestCache(loggerFactory.CreateLogger<RequestCache>());
@@ -163,15 +165,23 @@ public sealed class ApiServer : IApiServerControl, IAsyncDisposable, ICommunicat
         // IsReply 플래그로 응답/요청을 구분 (MsgSeq만으로는 구분 불가)
         if (packet.Header.IsReply && packet.MsgSeq > 0)
         {
-            // Zero-copy: Transfer payload ownership from RoutePacket to CPacket
-            var response = CPacket.Of(packet.MsgId, packet.Payload);
+            // Zero-copy ownership transfer: move payload to response packet, then dispose RoutePacket.
+            var response = CPacket.Of(packet.MsgId, packet.Payload.Move());
             if (_requestCache.TryComplete(packet.MsgSeq, response))
             {
-                // CPacket now owns the payload - don't dispose RoutePacket
-                // RoutePacket will be GC'd, CPacket.Dispose() will free the payload
+                packet.Dispose();
                 return;
             }
-            // TryComplete failed - RoutePacket still owns payload, will go to dispatcher
+
+            // No pending request for this reply. Drop it to avoid dispatch loops.
+            response.Dispose();
+            _logger.LogWarning(
+                "Dropping unmatched reply packet: MsgId={MsgId}, MsgSeq={MsgSeq}, From={From}",
+                packet.MsgId,
+                packet.MsgSeq,
+                packet.From);
+            packet.Dispose();
+            return;
         }
 
         // 시스템 메시지 라우팅

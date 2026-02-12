@@ -70,8 +70,8 @@ public sealed class ServerConfig
         string serverId,
         string bindEndpoint,
         int requestTimeoutMs = 30000,
-        int sendHighWatermark = 1000,
-        int receiveHighWatermark = 1000,
+        int sendHighWatermark = 300000,
+        int receiveHighWatermark = 300000,
         bool tcpKeepalive = true)
     {
         ServerType = serverType;

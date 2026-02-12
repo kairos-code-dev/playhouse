@@ -32,7 +32,7 @@ public sealed class SendPathEncodingBenchmark
         _output = output;
     }
 
-    [Fact(DisplayName = "벤치마크 - 송신 인코딩 경로 비교 (Legacy Copy vs Segmented)")]
+    [Fact(DisplayName = "벤치마크 - 송신 인코딩 경로 비교 (Legacy Copy vs Segmented)", Skip = "수동 실행용 벤치마크 테스트")]
     public void Benchmark_SendPathEncoding_Comparison()
     {
         _output.WriteLine("=== Send Path Encoding Benchmark ===");

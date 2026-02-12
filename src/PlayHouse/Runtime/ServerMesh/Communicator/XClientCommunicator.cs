@@ -9,7 +9,7 @@ namespace PlayHouse.Runtime.ServerMesh.Communicator;
 
 /// <summary>
 /// Optimized client communicator using System.Threading.Channels to avoid delegate allocations.
-/// Maintains ZMQ thread-safety by ensuring all socket operations happen on a single dedicated thread.
+/// Maintains transport socket thread-safety by ensuring send operations happen on a single dedicated thread.
 /// </summary>
 internal sealed class XClientCommunicator : IClientCommunicator
 {
@@ -18,9 +18,6 @@ internal sealed class XClientCommunicator : IClientCommunicator
     private readonly ConcurrentDictionary<string, byte> _connected = new();
     private readonly CancellationTokenSource _cts = new();
 
-    /// <summary>
-    /// Internal struct to hold send data without heap allocation.
-    /// </summary>
     private readonly struct SendRequest
     {
         public readonly string TargetServerId;
@@ -58,14 +55,13 @@ internal sealed class XClientCommunicator : IClientCommunicator
     public void Connect(string targetServerId, string address)
     {
         if (!_connected.TryAdd(address, 0)) return;
-        // Connect is usually called at startup, so direct call is safe if thread not yet started
-        // or we can use a specialized command in the channel if dynamic connect is needed.
-        _socket.Connect(address);
+        _socket.Connect(address, targetServerId);
     }
 
     public void Disconnect(string targetServerId, string address)
     {
         if (!_connected.TryRemove(address, out _)) return;
+        _socket.MarkRouterIdNotReady(targetServerId);
         _socket.Disconnect(address);
     }
 
@@ -75,6 +71,7 @@ internal sealed class XClientCommunicator : IClientCommunicator
     public void Communicate()
     {
         var reader = _sendChannel.Reader;
+        var pending = new List<SendRequest>(64);
         try
         {
             while (!_cts.Token.IsCancellationRequested)
@@ -82,12 +79,40 @@ internal sealed class XClientCommunicator : IClientCommunicator
                 // Wait for data without spinning
                 if (reader.TryRead(out var request))
                 {
-                    _socket.Send(request.TargetServerId, request.Packet);
-
-                    // Batching: Process all available messages before yielding
-                    while (reader.TryRead(out request))
+                    // Batching: Process all available messages before yielding.
+                    if (_socket.IsRouterIdReady(request.TargetServerId))
                     {
                         _socket.Send(request.TargetServerId, request.Packet);
+                    }
+                    else
+                    {
+                        pending.Add(request);
+                    }
+
+                    while (reader.TryRead(out request))
+                    {
+                        if (_socket.IsRouterIdReady(request.TargetServerId))
+                        {
+                            _socket.Send(request.TargetServerId, request.Packet);
+                        }
+                        else
+                        {
+                            pending.Add(request);
+                        }
+                    }
+
+                    if (pending.Count > 0)
+                    {
+                        foreach (var deferred in pending)
+                        {
+                            if (!_sendChannel.Writer.TryWrite(deferred))
+                            {
+                                deferred.Packet.Dispose();
+                            }
+                        }
+
+                        pending.Clear();
+                        Thread.Sleep(1);
                     }
                 }
                 else

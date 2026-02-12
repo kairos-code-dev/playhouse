@@ -1,0 +1,50 @@
+{
+  "note": "PlayHouse.Benchmark.SS.Client currently does not persist output files; values captured from run-single.sh console output.",
+  "runs": [
+    {
+      "size": 64,
+      "ccu": 10000,
+      "inflight": 10,
+      "mode": "send",
+      "throughput_msg_per_sec": 500661,
+      "server_latency_mean_ms": 330.58,
+      "server_latency_p95_ms": 588.37,
+      "server_latency_p99_ms": 641.93,
+      "server_avg_cpu_percent": 55.97,
+      "server_memory_alloc_mb": 3141.33,
+      "server_gc": "6/5/4",
+      "total_s2s_messages": 5235669,
+      "total_test_time_sec": 10.46
+    },
+    {
+      "size": 1024,
+      "ccu": 10000,
+      "inflight": 10,
+      "mode": "send",
+      "throughput_msg_per_sec": 370190,
+      "server_latency_mean_ms": 1069.46,
+      "server_latency_p95_ms": 1978.64,
+      "server_latency_p99_ms": 2044.52,
+      "server_avg_cpu_percent": 53.83,
+      "server_memory_alloc_mb": 3686.51,
+      "server_gc": "6/4/4",
+      "total_s2s_messages": 3863744,
+      "total_test_time_sec": 10.44
+    },
+    {
+      "size": 65536,
+      "ccu": 10000,
+      "inflight": 10,
+      "mode": "send",
+      "throughput_msg_per_sec": 33230,
+      "server_latency_mean_ms": 5065.60,
+      "server_latency_p95_ms": 10036.45,
+      "server_latency_p99_ms": 11378.08,
+      "server_avg_cpu_percent": 19.16,
+      "server_memory_alloc_mb": 7990.66,
+      "server_gc": "9/6/5",
+      "total_s2s_messages": 374604,
+      "total_test_time_sec": 11.27
+    }
+  ]
+}

@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Net.Zmq" Version="0.4.1" />
     <PackageReference Include="Google.Protobuf" Version="3.29.1" />
   </ItemGroup>
   <ItemGroup>

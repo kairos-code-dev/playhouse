@@ -1,9 +1,8 @@
 #nullable enable
 
-using Net.Zmq;
-using Net.Zmq.Core.Native;
 using PlayHouse.Runtime.ServerMesh.Message;
 using PlayHouse.Runtime.ServerMesh.PlaySocket;
+using Zlink;
 
 namespace PlayHouse.Runtime.ServerMesh.Communicator;
 
@@ -13,6 +12,8 @@ namespace PlayHouse.Runtime.ServerMesh.Communicator;
 /// </summary>
 internal sealed class XServerCommunicator : IServerCommunicator
 {
+    private const int ZlinkEterm = 156384765;
+
     private readonly IPlaySocket _socket;
     private readonly string _bindEndpoint;
     private ICommunicateListener? _listener;
@@ -70,7 +71,7 @@ internal sealed class XServerCommunicator : IServerCommunicator
                     _listener?.OnReceive(packet);
                 }
             }
-            catch (ZmqException ex) when (ex.ErrorNumber == ZmqConstants.ETERM)
+            catch (ZlinkException ex) when (!_running || ex.Errno == ZlinkEterm)
             {
                 // Context terminated - 정상 종료
                 break;

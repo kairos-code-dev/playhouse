@@ -157,8 +157,10 @@ public sealed class ServerAddressResolver : IDisposable
     {
         foreach (var change in changes)
         {
-            // Note: Self-connection is now allowed for same-server Stage-to-Stage routing
-            // ZMQ Router socket can route messages to itself when connected to own endpoint
+            if (string.Equals(change.Server.ServerId, _myServerInfo.ServerId, StringComparison.Ordinal))
+            {
+                continue;
+            }
 
             switch (change.Type)
             {

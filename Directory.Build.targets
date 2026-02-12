@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <ZlinkHostArchitecture Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">x64</ZlinkHostArchitecture>
+    <ZlinkHostArchitecture Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X86'">x86</ZlinkHostArchitecture>
+    <ZlinkHostArchitecture Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">arm64</ZlinkHostArchitecture>
+    <ZlinkHostArchitecture Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm'">arm</ZlinkHostArchitecture>
+
+    <ZlinkHostRid Condition="$([MSBuild]::IsOSPlatform('Windows'))">win-$(ZlinkHostArchitecture)</ZlinkHostRid>
+    <ZlinkHostRid Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx-$(ZlinkHostArchitecture)</ZlinkHostRid>
+    <ZlinkHostRid Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux-$(ZlinkHostArchitecture)</ZlinkHostRid>
+
+    <ZlinkHostNativeDir>$(MSBuildThisFileDirectory)..\zlink\bindings\dotnet\runtimes\$(ZlinkHostRid)\native</ZlinkHostNativeDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(ZlinkHostRid)' != '' and Exists('$(ZlinkHostNativeDir)')">
+    <ZlinkHostNativeFile Include="$(ZlinkHostNativeDir)\*.*" />
+  </ItemGroup>
+
+  <Target Name="CopyZlinkHostNative" AfterTargets="Build" Condition="'@(ZlinkHostNativeFile)' != '' and '$(IsCrossTargetingBuild)' != 'true'">
+    <Copy SourceFiles="@(ZlinkHostNativeFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
