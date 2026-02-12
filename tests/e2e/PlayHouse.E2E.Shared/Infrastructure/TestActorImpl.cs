@@ -67,7 +67,7 @@ public class TestActorImpl : IActor
             var singleAccountId = string.IsNullOrWhiteSpace(receivedUserId)
                 ? $"single-{Interlocked.Increment(ref _accountIdCounter)}"
                 : receivedUserId;
-            ActorLink.SetAuthContext(singleAccountId, "SingleStage");
+            ActorLink.SetAuthSingleContext(singleAccountId, "SingleStage");
         }
         else
         {

@@ -111,12 +111,10 @@ public class C08_DisconnectionTests : BaseIntegrationTest
         Connector.IsConnected().Should().BeFalse("연결이 끊어진 상태");
 
         // When: 새로운 Stage로 재연결
-        var newStageInfo = await TestServer.CreateTestStageAsync();
+        await TestServer.CreateTestStageAsync();
         var reconnected = await Connector.ConnectAsync(
             TestServer.Host,
-            TestServer.TcpPort,
-            newStageInfo.StageId,
-            newStageInfo.StageType
+            TestServer.TcpPort
         );
 
         // Then: 재연결이 성공해야 함

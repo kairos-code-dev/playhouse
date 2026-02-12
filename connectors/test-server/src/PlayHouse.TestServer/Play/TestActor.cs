@@ -76,7 +76,9 @@ public class TestActor : IActor
                 var failReply = new AuthenticateReply
                 {
                     AccountId = "",
+                    StageId = 0,
                     Success = false,
+                    StageType = StageTypes.TestStage,
                     ReceivedUserId = authRequest.UserId,
                     ReceivedToken = authRequest.Token
                 };
@@ -87,7 +89,9 @@ public class TestActor : IActor
             var authReply = new AuthenticateReply
             {
                 AccountId = ActorLink.AccountId,
+                StageId = stageId,
                 Success = true,
+                StageType = StageTypes.TestStage,
                 ReceivedUserId = authRequest.UserId,
                 ReceivedToken = authRequest.Token
             };

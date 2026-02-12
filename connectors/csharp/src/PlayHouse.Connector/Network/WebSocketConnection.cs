@@ -289,27 +289,27 @@ internal sealed class WebSocketConnection : IConnection
     {
         int offset = 0;
 
-        // Protocol: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) + Payload
+        // Protocol: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) + Payload
 
         // MsgIdLen (1 byte)
         var msgIdLen = buffer.PeekByte(offset++);
 
         // Fix #7: Protocol boundary validation before reading payload
-        // Minimum packet size: MsgIdLen(1) + MsgId(1+) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) = 18 bytes
+        // Minimum packet size: MsgIdLen(1) + MsgId(1+) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) = 10 bytes
         // Validate msgIdLen is within bounds (1-255) and reasonable (1-128 practical limit)
         if (msgIdLen == 0 || msgIdLen > 128)
         {
             throw new InvalidOperationException($"Invalid MsgIdLen: {msgIdLen}");
         }
 
-        var minimumPacketSize = 1 + msgIdLen + 2 + 8 + 2 + 4;
+        var minimumPacketSize = 1 + msgIdLen + 2 + 2 + 4;
         if (packetSize < minimumPacketSize)
         {
             throw new InvalidOperationException($"Invalid packet structure: packetSize={packetSize}, msgIdLen={msgIdLen}, minimumPacketSize={minimumPacketSize}");
         }
 
         // Validate payload size is non-negative
-        var headerSize = 1 + msgIdLen + 2 + 8 + 2 + 4;
+        var headerSize = 1 + msgIdLen + 2 + 2 + 4;
         var payloadSize = packetSize - headerSize;
         if (payloadSize < 0)
         {
@@ -329,14 +329,6 @@ internal sealed class WebSocketConnection : IConnection
         msgSeqBytes[0] = buffer.PeekByte(offset++);
         msgSeqBytes[1] = buffer.PeekByte(offset++);
         var msgSeq = BinaryPrimitives.ReadUInt16LittleEndian(msgSeqBytes);
-
-        // StageId (8 bytes)
-        Span<byte> stageIdBytes = stackalloc byte[8];
-        for (int i = 0; i < 8; i++)
-        {
-            stageIdBytes[i] = buffer.PeekByte(offset++);
-        }
-        var stageId = BinaryPrimitives.ReadInt64LittleEndian(stageIdBytes);
 
         // ErrorCode (2 bytes)
         Span<byte> errorCodeBytes = stackalloc byte[2];
@@ -397,7 +389,7 @@ internal sealed class WebSocketConnection : IConnection
         }
 
         // Create ParsedPacket wrapper to pass metadata
-        return new ParsedPacket(msgId, msgSeq, stageId, errorCode, payload);
+        return new ParsedPacket(msgId, msgSeq, 0, errorCode, payload);
     }
 
     private void HandleDisconnection(Exception? exception)

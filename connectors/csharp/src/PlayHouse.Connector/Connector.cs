@@ -191,6 +191,10 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
         _clientNetwork!.Request(request, response =>
         {
             _stageId = _clientNetwork.StageId;
+            if (TryExtractAuthStageType(response.Payload.DataSpan, out var stageType))
+            {
+                _stageType = stageType;
+            }
             callback(response);
         }, stageId: 0, isAuthenticate: true);
     }
@@ -209,6 +213,10 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
 
         var response = await _clientNetwork!.RequestAsync(request, stageId: 0, isAuthenticate: true);
         _stageId = _clientNetwork.StageId;
+        if (TryExtractAuthStageType(response.Payload.DataSpan, out var stageType))
+        {
+            _stageType = stageType;
+        }
         return response;
     }
 
@@ -288,6 +296,97 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
             await _clientNetwork.DisposeAsync();
             _clientNetwork = null;
         }
+    }
+
+    private static bool TryExtractAuthStageType(ReadOnlySpan<byte> payload, out string stageType)
+    {
+        stageType = string.Empty;
+        int offset = 0;
+
+        while (offset < payload.Length)
+        {
+            if (!TryReadVarint(payload, ref offset, out var tag))
+            {
+                return false;
+            }
+
+            var wireType = (int)(tag & 0x07);
+            var fieldNumber = (int)(tag >> 3);
+
+            if (fieldNumber == 6 && wireType == 2)
+            {
+                if (!TryReadVarint(payload, ref offset, out var len))
+                {
+                    return false;
+                }
+
+                if (offset + (int)len > payload.Length)
+                {
+                    return false;
+                }
+
+                stageType = System.Text.Encoding.UTF8.GetString(payload.Slice(offset, (int)len));
+                return true;
+            }
+
+            if (!SkipField(payload, ref offset, wireType))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadVarint(ReadOnlySpan<byte> data, ref int offset, out ulong value)
+    {
+        value = 0;
+        int shift = 0;
+        while (offset < data.Length && shift < 64)
+        {
+            var b = data[offset++];
+            value |= (ulong)(b & 0x7F) << shift;
+            if ((b & 0x80) == 0)
+            {
+                return true;
+            }
+            shift += 7;
+        }
+
+        return false;
+    }
+
+    private static bool SkipField(ReadOnlySpan<byte> data, ref int offset, int wireType)
+    {
+        return wireType switch
+        {
+            0 => TryReadVarint(data, ref offset, out _),
+            1 => SkipBytes(data, ref offset, 8),
+            2 => SkipLengthDelimited(data, ref offset),
+            5 => SkipBytes(data, ref offset, 4),
+            _ => false
+        };
+    }
+
+    private static bool SkipLengthDelimited(ReadOnlySpan<byte> data, ref int offset)
+    {
+        if (!TryReadVarint(data, ref offset, out var len))
+        {
+            return false;
+        }
+
+        return SkipBytes(data, ref offset, (int)len);
+    }
+
+    private static bool SkipBytes(ReadOnlySpan<byte> data, ref int offset, int count)
+    {
+        if (offset + count > data.Length)
+        {
+            return false;
+        }
+
+        offset += count;
+        return true;
     }
 
     #endregion

@@ -203,6 +203,9 @@ public final class Connector implements AutoCloseable {
     public void setAuthenticated(boolean authenticated) {
         if (initialized) {
             clientNetwork.setAuthenticated(authenticated);
+            if (!authenticated) {
+                this.stageId = 0L;
+            }
         }
     }
 
@@ -257,12 +260,10 @@ public final class Connector implements AutoCloseable {
      * @return 인증 성공 여부 Future
      */
     public CompletableFuture<Boolean> authenticateAsync(Packet authPacket) {
-        return clientNetwork.requestAsync(authPacket, 0L)
+        return requestAsync(authPacket)
             .thenApply(response -> {
                 boolean success = response.getErrorCode() == 0;
                 if (success) {
-                    clientNetwork.setAuthenticated(true);
-                    this.stageId = response.getStageId();
                     logger.info("Authentication successful");
                 } else {
                     logger.warn("Authentication failed: errorCode={}", response.getErrorCode());
@@ -328,7 +329,14 @@ public final class Connector implements AutoCloseable {
                     ConnectorErrorCode.DISCONNECTED.getMessage(), packet)
             );
         }
-        return clientNetwork.requestAsync(packet, stageId);
+        return clientNetwork.requestAsync(packet, stageId)
+            .thenApply(response -> {
+                if ("AuthenticateRequest".equals(packet.getMsgId()) && response.getErrorCode() == 0) {
+                    clientNetwork.setAuthenticated(true);
+                    this.stageId = extractAuthStageId(response.getPayload());
+                }
+                return response;
+            });
     }
 
     /**
@@ -469,6 +477,82 @@ public final class Connector implements AutoCloseable {
     private void checkInitialized() {
         if (!initialized) {
             throw new IllegalStateException("Connector not initialized. Call init() first.");
+        }
+    }
+
+    private static long extractAuthStageId(byte[] payload) {
+        int offset = 0;
+        while (offset < payload.length) {
+            VarintResult tag = readVarint(payload, offset);
+            if (!tag.success) {
+                return 0L;
+            }
+
+            offset = tag.nextOffset;
+            int fieldNumber = (int) (tag.value >>> 3);
+            int wireType = (int) (tag.value & 0x07);
+
+            if (fieldNumber == 2 && wireType == 0) {
+                VarintResult value = readVarint(payload, offset);
+                return value.success ? value.value : 0L;
+            }
+
+            int next = skipField(payload, offset, wireType);
+            if (next <= offset) {
+                return 0L;
+            }
+            offset = next;
+        }
+
+        return 0L;
+    }
+
+    private static int skipField(byte[] data, int offset, int wireType) {
+        switch (wireType) {
+            case 0: {
+                VarintResult value = readVarint(data, offset);
+                return value.success ? value.nextOffset : offset;
+            }
+            case 1:
+                return (offset + 8 <= data.length) ? offset + 8 : offset;
+            case 2: {
+                VarintResult len = readVarint(data, offset);
+                if (!len.success) {
+                    return offset;
+                }
+                int next = (int) (len.nextOffset + len.value);
+                return (next <= data.length) ? next : offset;
+            }
+            case 5:
+                return (offset + 4 <= data.length) ? offset + 4 : offset;
+            default:
+                return offset;
+        }
+    }
+
+    private static VarintResult readVarint(byte[] data, int offset) {
+        long value = 0L;
+        int shift = 0;
+        while (offset < data.length && shift < 64) {
+            int b = data[offset++] & 0xFF;
+            value |= (long) (b & 0x7F) << shift;
+            if ((b & 0x80) == 0) {
+                return new VarintResult(true, value, offset);
+            }
+            shift += 7;
+        }
+        return new VarintResult(false, 0L, offset);
+    }
+
+    private static final class VarintResult {
+        final boolean success;
+        final long value;
+        final int nextOffset;
+
+        VarintResult(boolean success, long value, int nextOffset) {
+            this.success = success;
+            this.value = value;
+            this.nextOffset = nextOffset;
         }
     }
 

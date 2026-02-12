@@ -274,6 +274,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         long stageId,
         IPayload payload)
     {
+        _ = stageId;
         // 미인증 클라이언트 체크
         if (!session.IsAuthenticated)
         {
@@ -289,7 +290,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         }
 
         // 기본 핸들러: 인증 및 메시지 처리
-        HandleDefaultMessage(session, msgId, msgSeq, stageId, payload);
+        HandleDefaultMessage(session, msgId, msgSeq, payload);
     }
 
     /// <summary>
@@ -303,13 +304,12 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         ITransportSession session,
         string msgId,
         ushort msgSeq,
-        long stageId,
         IPayload payload)
     {
         // 인증 요청 처리 (async - fire-and-forget)
         if (msgId == _options.AuthenticateMessageId)
         {
-            _ = HandleAuthenticationAsync(session, msgSeq, stageId, payload); // Fire-and-forget
+            _ = HandleAuthenticationAsync(session, msgSeq, payload); // Fire-and-forget
             return;
         }
 
@@ -317,7 +317,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         if (msgId == "@Heart@Beat@")
         {
             // Use new zero-copy API (synchronous - queued internally)
-            session.SendResponse(msgId, msgSeq, stageId, 0, ReadOnlySpan<byte>.Empty);
+            session.SendResponse(msgId, msgSeq, session.StageId, 0, ReadOnlySpan<byte>.Empty);
             payload.Dispose();
             return;
         }
@@ -326,7 +326,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         if (session.IsAuthenticated && !string.IsNullOrEmpty(session.AccountId))
         {
             // Direct routing without ClientRouteMessage allocation (perf: avoid heap alloc per message)
-            _dispatcher?.RouteClientMessage(session, stageId, session.AccountId, msgId, msgSeq, session.SessionId, payload);
+            _dispatcher?.RouteClientMessage(session, session.StageId, session.AccountId, msgId, msgSeq, session.SessionId, payload);
         }
         else
         {
@@ -339,12 +339,10 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     private async Task HandleAuthenticationAsync(
         ITransportSession session,
         ushort msgSeq,
-        long stageId,
         IPayload payload)
     {
         try
         {
-            _ = stageId;
             if (_dispatcher == null || _systemLink == null)
             {
                 await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InternalError);

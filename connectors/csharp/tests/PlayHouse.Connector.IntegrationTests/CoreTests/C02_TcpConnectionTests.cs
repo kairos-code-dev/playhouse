@@ -24,16 +24,14 @@ public class C02_TcpConnectionTests : BaseIntegrationTest
         // When: TCP 연결 시도
         var connected = await Connector!.ConnectAsync(
             TestServer.Host,
-            TestServer.TcpPort,
-            StageInfo.StageId,
-            StageInfo.StageType
+            TestServer.TcpPort
         );
 
         // Then: 연결이 성공해야 함
         connected.Should().BeTrue("TCP 연결이 성공해야 함");
         Connector.IsConnected().Should().BeTrue("연결 상태가 true여야 함");
-        Connector.StageId.Should().Be(StageInfo.StageId, "연결된 Stage ID가 일치해야 함");
-        Connector.StageType.Should().Be(StageInfo.StageType, "연결된 Stage 타입이 일치해야 함");
+        Connector.StageId.Should().Be(0, "인증 전에는 Stage ID가 설정되지 않아야 함");
+        Connector.StageType.Should().BeEmpty("인증 전에는 Stage 타입이 설정되지 않아야 함");
     }
 
     [Fact(DisplayName = "C-02-02: 연결 후 IsConnected는 true를 반환한다")]
@@ -79,9 +77,7 @@ public class C02_TcpConnectionTests : BaseIntegrationTest
         // When: 연결 시도
         Connector.Connect(
             TestServer.Host,
-            TestServer.TcpPort,
-            StageInfo.StageId,
-            StageInfo.StageType
+            TestServer.TcpPort
         );
 
         // OnConnect 이벤트 대기 (MainThreadAction 호출하면서 최대 5초)
@@ -93,18 +89,13 @@ public class C02_TcpConnectionTests : BaseIntegrationTest
         connectResult.Should().BeTrue("연결 결과가 true여야 함");
     }
 
-    [Fact(DisplayName = "C-02-05: 잘못된 Stage ID로 연결해도 TCP 연결은 성공한다")]
-    public async Task Connect_WithInvalidStageId_TcpConnectionSucceeds()
+    [Fact(DisplayName = "C-02-05: Stage 정보 없이도 TCP 연결은 성공한다")]
+    public async Task Connect_WithoutStageInfo_TcpConnectionSucceeds()
     {
-        // Given: 존재하지 않는 Stage ID
-        var invalidStageId = 999999999L;
-
-        // When: 잘못된 Stage ID로 연결 시도
+        // When: Stage 정보 없이 연결 시도
         var connected = await Connector!.ConnectAsync(
             TestServer.Host,
-            TestServer.TcpPort,
-            invalidStageId,
-            "TestStage"
+            TestServer.TcpPort
         );
 
         // Then: TCP 연결 자체는 성공함 (Stage ID 검증은 서버 레벨에서 나중에 이루어짐)
@@ -125,17 +116,15 @@ public class C02_TcpConnectionTests : BaseIntegrationTest
         Connector.Disconnect();
         await Task.Delay(500); // 연결 해제 대기
 
-        var newStageInfo = await TestServer.CreateTestStageAsync();
+        await TestServer.CreateTestStageAsync();
         var reconnected = await Connector.ConnectAsync(
             TestServer.Host,
-            TestServer.TcpPort,
-            newStageInfo.StageId,
-            newStageInfo.StageType
+            TestServer.TcpPort
         );
 
         // Then: 재연결이 성공해야 함
         reconnected.Should().BeTrue("재연결이 성공해야 함");
         Connector.IsConnected().Should().BeTrue("재연결 후 연결 상태가 true여야 함");
-        Connector.StageId.Should().Be(newStageInfo.StageId, "새로운 Stage ID가 설정되어야 함");
+        Connector.StageId.Should().Be(0, "재연결 직후 인증 전에는 Stage ID가 설정되지 않아야 함");
     }
 }

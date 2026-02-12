@@ -52,8 +52,8 @@ export const PacketConst = {
     MsgIdLimit: 256,
     /** Maximum payload size (2MB) */
     MaxBodySize: 1024 * 1024 * 2,
-    /** Minimum header size: MsgIdLen(1) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) = 17 */
-    MinHeaderSize: 17,
+    /** Minimum response size with 1-byte MsgId: MsgIdLen(1) + MsgId(1) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) = 10 */
+    MinHeaderSize: 10,
     /** Heartbeat message ID */
     HeartBeat: '@Heart@Beat@',
     /** Debug message ID */

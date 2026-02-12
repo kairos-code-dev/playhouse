@@ -60,9 +60,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
         {
             await _connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                _stageInfo!.StageId,
-                _stageInfo.StageType
+                _testServer.TcpPort
             );
         });
     }
@@ -107,9 +105,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
 
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "timeout-user", Token = "valid_token" };
@@ -140,9 +136,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
         // Act
         var connected = await _connector!.ConnectAsync(
             "invalid.host.that.does.not.exist.local",
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         // Assert
@@ -163,9 +157,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
         // Act
         var connected = await _connector!.ConnectAsync(
             _testServer.Host,
-            59999,  // 사용하지 않는 포트
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            59999  // 사용하지 않는 포트
         );
 
         // Assert
@@ -185,9 +177,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
 
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "empty-msgid-user", Token = "valid_token" };
@@ -215,9 +205,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
 
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         // Act - 여러 번 Disconnect
@@ -248,9 +236,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
         {
             await _connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                _stageInfo!.StageId,
-                _stageInfo.StageType
+                _testServer.TcpPort
             );
         });
 
@@ -269,9 +255,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
 
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         Assert.True(_connector.IsConnected());
@@ -283,8 +267,8 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
         _connector = null;  // DisposeAsync에서 다시 처리하지 않도록
     }
 
-    [Fact(DisplayName = "A-06-11: StageId와 StageType이 Connector에 저장된다")]
-    public async Task StageId_And_StageType_Stored()
+    [Fact(DisplayName = "A-06-11: 인증 성공 후 StageId와 StageType이 Connector에 저장된다")]
+    public async Task StageId_And_StageType_Stored_AfterAuthentication()
     {
         // Arrange
         CreateConnectorWithConfig(new ConnectorConfig
@@ -296,13 +280,17 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
         // Act
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
+        var userId = "stage-context-user";
+        await _testServer.AssignStageAsync(userId, _stageInfo!.StageId);
+        var authRequest = new AuthenticateRequest { UserId = userId, Token = "valid_token" };
+        using var authPacket = new Packet(authRequest);
+        await _connector.AuthenticateAsync(authPacket);
+
         // Assert
-        Assert.Equal(_stageInfo.StageId, _connector.StageId);
+        Assert.Equal(_stageInfo!.StageId, _connector.StageId);
         Assert.Equal(_stageInfo.StageType, _connector.StageType);
     }
 
@@ -318,9 +306,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
 
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "long-string-user", Token = "valid_token" };
@@ -352,9 +338,7 @@ public class A06_EdgeCaseTests : IClassFixture<TestServerFixture>, IAsyncLifetim
 
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "special-char-user", Token = "valid_token" };

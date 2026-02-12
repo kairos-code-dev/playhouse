@@ -72,9 +72,7 @@ public abstract class BaseIntegrationTest : IClassFixture<TestServerFixture>, IA
 
         return await Connector!.ConnectAsync(
             TestServer.Host,
-            TestServer.TcpPort,
-            StageInfo.StageId,
-            StageInfo.StageType
+            TestServer.TcpPort
         );
     }
 

@@ -11,22 +11,22 @@ namespace PlayHouse.Runtime.ClientTransport;
 /// </summary>
 /// <remarks>
 /// Message formats:
-/// - Request: [MsgIdLen:1][MsgId:N][MsgSeq:2][StageId:8][Payload]
-/// - Response: [MsgIdLen:1][MsgId:N][MsgSeq:2][StageId:8][ErrorCode:2][OriginalSize:4][Payload]
+/// - Request: [MsgIdLen:1][MsgId:N][MsgSeq:2][Payload]
+/// - Response: [MsgIdLen:1][MsgId:N][MsgSeq:2][ErrorCode:2][OriginalSize:4][Payload]
 ///
 /// TCP adds a 4-byte length prefix, WebSocket uses native framing.
 /// </remarks>
 internal static class MessageCodec
 {
     /// <summary>
-    /// Minimum message size: MsgIdLen(1) + MsgSeq(2) + StageId(8) = 11 bytes
+    /// Minimum message size: MsgIdLen(1) + MsgSeq(2) = 3 bytes
     /// </summary>
-    public const int MinMessageSize = 11;
+    public const int MinMessageSize = 3;
 
     /// <summary>
-    /// Response header size after MsgId: MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) = 16 bytes
+    /// Response header size after MsgId: MsgSeq(2) + ErrorCode(2) + OriginalSize(4) = 8 bytes
     /// </summary>
-    public const int ResponseHeaderSize = 16;
+    public const int ResponseHeaderSize = 8;
 
     /// <summary>
     /// Cache for UTF-8 encoded message IDs to avoid repeated allocations.
@@ -65,7 +65,7 @@ internal static class MessageCodec
         var msgIdLen = data[offset++];
 
         // Validate we have enough data
-        if (offset + msgIdLen + 10 > data.Length)
+        if (offset + msgIdLen + 2 > data.Length)
             return false;
 
         // MsgId
@@ -76,10 +76,6 @@ internal static class MessageCodec
         msgSeq = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(offset));
         offset += 2;
 
-        // StageId (8 bytes)
-        stageId = BinaryPrimitives.ReadInt64LittleEndian(data.Slice(offset));
-        offset += 8;
-
         payloadOffset = offset;
         return true;
     }
@@ -89,7 +85,7 @@ internal static class MessageCodec
     /// </summary>
     public static int CalculateResponseSize(int msgIdLength, int payloadLength, bool includeLengthPrefix)
     {
-        // MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) + Payload
+        // MsgIdLen(1) + MsgId(N) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) + Payload
         var bodySize = 1 + msgIdLength + ResponseHeaderSize + payloadLength;
         return includeLengthPrefix ? 4 + bodySize : bodySize;
     }
@@ -106,6 +102,7 @@ internal static class MessageCodec
         ushort errorCode,
         ReadOnlySpan<byte> payload)
     {
+        _ = stageId;
         var msgIdBytes = GetMsgIdBytes(msgId);
         int offset = 0;
 
@@ -119,10 +116,6 @@ internal static class MessageCodec
         // MsgSeq (2 bytes)
         BinaryPrimitives.WriteUInt16LittleEndian(buffer.Slice(offset), msgSeq);
         offset += 2;
-
-        // StageId (8 bytes)
-        BinaryPrimitives.WriteInt64LittleEndian(buffer.Slice(offset), stageId);
-        offset += 8;
 
         // ErrorCode (2 bytes)
         BinaryPrimitives.WriteUInt16LittleEndian(buffer.Slice(offset), errorCode);

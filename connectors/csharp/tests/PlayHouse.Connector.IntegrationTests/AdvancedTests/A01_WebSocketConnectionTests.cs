@@ -57,9 +57,7 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Act
         var connected = await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,  // WebSocket은 HTTP 포트 사용
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort  // WebSocket은 HTTP 포트 사용
         );
 
         // Assert
@@ -73,9 +71,7 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Arrange
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort
         );
 
         var authRequest = new AuthenticateRequest
@@ -83,6 +79,7 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
             UserId = "ws-user-1",
             Token = "valid_token"
         };
+        await _testServer.AssignStageAsync(authRequest.UserId, _stageInfo!.StageId);
 
         // Act
         using var requestPacket = new Packet(authRequest);
@@ -100,12 +97,11 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Arrange
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "ws-user-2", Token = "valid_token" };
+        await _testServer.AssignStageAsync(authRequest.UserId, _stageInfo!.StageId);
         using var authPacket = new Packet(authRequest);
         await _connector.AuthenticateAsync(authPacket);
 
@@ -131,12 +127,11 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Arrange
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "ws-user-3", Token = "valid_token" };
+        await _testServer.AssignStageAsync(authRequest.UserId, _stageInfo!.StageId);
         using var authPacket = new Packet(authRequest);
         await _connector.AuthenticateAsync(authPacket);
 
@@ -170,9 +165,7 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Arrange
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort
         );
         Assert.True(_connector.IsConnected());
 
@@ -182,12 +175,10 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         Assert.False(_connector.IsConnected());
 
         // Act - Reconnect
-        var newStage = await _testServer.CreateTestStageAsync();
+        await _testServer.CreateTestStageAsync();
         var reconnected = await _connector.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,
-            newStage.StageId,
-            newStage.StageType
+            _testServer.HttpPort
         );
 
         // Assert
@@ -201,12 +192,11 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Arrange
         await _connector!.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort
         );
 
         var authRequest = new AuthenticateRequest { UserId = "ws-user-4", Token = "valid_token" };
+        await _testServer.AssignStageAsync(authRequest.UserId, _stageInfo!.StageId);
         using var authPacket = new Packet(authRequest);
         await _connector.AuthenticateAsync(authPacket);
 
@@ -245,9 +235,7 @@ public class A01_WebSocketConnectionTests : IClassFixture<TestServerFixture>, IA
         // Act
         _connector.Connect(
             _testServer.Host,
-            _testServer.HttpPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpPort
         );
 
         // Wait for connection with MainThreadAction

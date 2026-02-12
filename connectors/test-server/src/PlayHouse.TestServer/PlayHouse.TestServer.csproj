@@ -10,8 +10,8 @@
     <PackageReference Include="Grpc.Tools" Version="2.68.1" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../../../servers/dotnet/src/PlayHouse/PlayHouse.csproj" />
-    <ProjectReference Include="../../../../servers/dotnet/extensions/PlayHouse.Extensions.Proto/PlayHouse.Extensions.Proto.csproj" />
+    <ProjectReference Include="../../../../src/PlayHouse/PlayHouse.csproj" />
+    <ProjectReference Include="../../../../extensions/PlayHouse.Extensions.Proto/PlayHouse.Extensions.Proto.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Proto files compilation -->

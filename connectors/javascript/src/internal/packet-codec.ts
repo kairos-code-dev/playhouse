@@ -12,14 +12,14 @@ const textDecoder = new TextDecoder('utf-8');
 
 /**
  * Request packet format:
- * ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + Payload(...)
+ * ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + Payload(...)
  *
  * All integers are little-endian
  */
 
 /**
  * Response packet format:
- * ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) + Payload(...)
+ * ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) + Payload(...)
  *
  * All integers are little-endian
  */
@@ -28,10 +28,10 @@ const textDecoder = new TextDecoder('utf-8');
  * Encodes a packet for sending to the server
  * @param packet The packet to encode
  * @param msgSeq Message sequence number (0 for send, >0 for request)
- * @param stageId Stage ID
+ * @param _stageId Unused (kept for backwards call-site compatibility)
  * @returns Encoded binary data
  */
-export function encodePacket(packet: Packet, msgSeq: number, stageId: bigint): Uint8Array {
+export function encodePacket(packet: Packet, msgSeq: number, _stageId: bigint): Uint8Array {
     const msgIdBytes = textEncoder.encode(packet.msgId);
     const msgIdLen = msgIdBytes.length;
 
@@ -44,8 +44,8 @@ export function encodePacket(packet: Packet, msgSeq: number, stageId: bigint): U
         throw new Error(`Payload too large: ${payloadLen} bytes (max ${PacketConst.MaxBodySize})`);
     }
 
-    // Calculate content size: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + Payload
-    const contentSize = 1 + msgIdLen + 2 + 8 + payloadLen;
+    // Calculate content size: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + Payload
+    const contentSize = 1 + msgIdLen + 2 + payloadLen;
     const totalSize = 4 + contentSize; // ContentSize header + content
 
     const buffer = new ArrayBuffer(totalSize);
@@ -69,10 +69,6 @@ export function encodePacket(packet: Packet, msgSeq: number, stageId: bigint): U
     // MsgSeq (2 bytes, little-endian)
     view.setUint16(offset, msgSeq & 0xffff, true);
     offset += 2;
-
-    // StageId (8 bytes, little-endian)
-    view.setBigInt64(offset, stageId, true);
-    offset += 8;
 
     // Payload
     bytes.set(packet.payload, offset);
@@ -106,10 +102,6 @@ export function decodePacket(data: Uint8Array): ParsedPacket {
     const msgSeq = view.getUint16(offset, true);
     offset += 2;
 
-    // StageId (8 bytes, little-endian)
-    const stageId = view.getBigInt64(offset, true);
-    offset += 8;
-
     // ErrorCode (2 bytes, little-endian)
     const errorCode = view.getUint16(offset, true);
     offset += 2;
@@ -132,7 +124,7 @@ export function decodePacket(data: Uint8Array): ParsedPacket {
         );
     }
 
-    return new ParsedPacket(msgId, msgSeq, stageId, errorCode, payload, originalSize);
+    return new ParsedPacket(msgId, msgSeq, 0n, errorCode, payload, originalSize);
 }
 
 /**

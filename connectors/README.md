@@ -27,3 +27,7 @@ https://github.com/ulala-x/playhouse.git?path=connectors/csharp
 ```bash
 npm install playhouse-connector
 ```
+
+## Testing
+
+커넥터 통합 테스트 실행 방법은 `connectors/TESTING.md`를 참고하세요.

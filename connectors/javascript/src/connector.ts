@@ -357,7 +357,7 @@ export class Connector {
                 resolve: (response) => {
                     if (response.errorCode === 0) {
                         this._isAuthenticated = true;
-                        this._stageId = response.stageId;
+                        this._stageId = this.extractAuthStageId(response.payload);
                         resolve(true);
                     } else {
                         resolve(false);
@@ -425,7 +425,7 @@ export class Connector {
             resolve: (response) => {
                 if (response.errorCode === 0) {
                     this._isAuthenticated = true;
-                    this._stageId = response.stageId;
+                    this._stageId = this.extractAuthStageId(response.payload);
                     this.queueAction(() => callback(true));
                 } else {
                     this.queueAction(() => {
@@ -491,7 +491,7 @@ export class Connector {
                 resolve: (response) => {
                     if (response.errorCode === 0) {
                         this._isAuthenticated = true;
-                        this._stageId = response.stageId;
+                        this._stageId = this.extractAuthStageId(response.payload);
                     }
                     resolve(response);
                 },
@@ -576,7 +576,7 @@ export class Connector {
                 } else {
                     if (pending.isAuthenticate) {
                         this._isAuthenticated = true;
-                        this._stageId = packet.stageId;
+                        this._stageId = this.extractAuthStageId(packet.payload);
                     }
                     pending.resolve(packet);
                 }
@@ -668,6 +668,72 @@ export class Connector {
             this._actionQueue.splice(0, 1000); // Drop oldest 1000 actions
         }
         this._actionQueue.push(action);
+    }
+
+    /**
+     * Extracts stageId from authentication reply payload (protobuf field #2, varint).
+     * Returns 0n when parsing fails.
+     */
+    private extractAuthStageId(payload: Uint8Array): bigint {
+        let offset = 0;
+        while (offset < payload.length) {
+            const [tag, nextTagOffset] = this.readVarint(payload, offset);
+            if (nextTagOffset <= offset) {
+                return 0n;
+            }
+
+            offset = nextTagOffset;
+            const fieldNumber = tag >>> 3;
+            const wireType = tag & 0x07;
+
+            if (fieldNumber === 2 && wireType === 0) {
+                const [value] = this.readVarint(payload, offset);
+                return BigInt(value);
+            }
+
+            const nextOffset = this.skipField(payload, offset, wireType);
+            if (nextOffset <= offset) {
+                return 0n;
+            }
+            offset = nextOffset;
+        }
+
+        return 0n;
+    }
+
+    private readVarint(data: Uint8Array, offset: number): [number, number] {
+        let result = 0;
+        let shift = 0;
+        while (offset < data.length && shift < 64) {
+            const b = data[offset++];
+            result += (b & 0x7f) * 2 ** shift;
+            if ((b & 0x80) === 0) {
+                return [result, offset];
+            }
+            shift += 7;
+        }
+
+        return [0, offset];
+    }
+
+    private skipField(data: Uint8Array, offset: number, wireType: number): number {
+        switch (wireType) {
+            case 0: {
+                const [, nextOffset] = this.readVarint(data, offset);
+                return nextOffset;
+            }
+            case 1:
+                return offset + 8 <= data.length ? offset + 8 : offset;
+            case 2: {
+                const [len, lenOffset] = this.readVarint(data, offset);
+                const next = lenOffset + len;
+                return next <= data.length ? next : offset;
+            }
+            case 5:
+                return offset + 4 <= data.length ? offset + 4 : offset;
+            default:
+                return offset;
+        }
     }
 
     /**

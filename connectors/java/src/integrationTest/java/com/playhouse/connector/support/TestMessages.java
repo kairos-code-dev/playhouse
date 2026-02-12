@@ -51,6 +51,7 @@ public class TestMessages {
      */
     public static class AuthenticateReply {
         public String accountId = "";
+        public long stageId;
         public boolean success;
         public String receivedUserId = "";
         public String receivedToken = "";
@@ -68,14 +69,17 @@ public class TestMessages {
                     case 1: // account_id
                         reply.accountId = readString(buffer);
                         break;
-                    case 2: // success
-                        reply.success = readVarint(buffer) != 0;
+                    case 2: // stage_id
+                        reply.stageId = readVarint64(buffer);
                         break;
                     case 3: // received_user_id
                         reply.receivedUserId = readString(buffer);
                         break;
                     case 4: // received_token
                         reply.receivedToken = readString(buffer);
+                        break;
+                    case 5: // success
+                        reply.success = readVarint(buffer) != 0;
                         break;
                     default:
                         skipField(buffer, wireType);

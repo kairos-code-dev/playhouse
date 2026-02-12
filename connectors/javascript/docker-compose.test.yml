@@ -15,6 +15,10 @@ services:
       - ENABLE_WEBSOCKET=true
       - WEBSOCKET_PATH=/ws
       - ENABLE_TLS=true
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/certs/server.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+    volumes:
+      - ../test-server/certs:/certs:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 5s

@@ -2,16 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy Directory.Build.props for shared build configuration
-COPY servers/dotnet/Directory.Build.props servers/dotnet/
-
-# Copy solution files
-COPY servers/dotnet/*.sln servers/dotnet/
-
-# Copy all server project files for dependency resolution
-COPY servers/dotnet/src/ servers/dotnet/src/
-COPY servers/dotnet/tests/ servers/dotnet/tests/
-COPY servers/dotnet/extensions/ servers/dotnet/extensions/
+# Copy shared build files and source tree used by PlayHouse.TestServer references
+COPY Directory.Build.props ./
+COPY PlayHouse.sln ./
+COPY src/ src/
+COPY tests/ tests/
+COPY extensions/ extensions/
 
 # Copy test-server project files
 COPY connectors/test-server/proto/ connectors/test-server/proto/

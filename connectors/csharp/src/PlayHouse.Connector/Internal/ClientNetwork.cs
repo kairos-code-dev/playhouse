@@ -365,9 +365,8 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
         var payloadSpan = packet.Payload.DataSpan;
 
-        // 스펙에 따라 ServiceId 제거
-        // MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + Payload
-        var contentSize = 1 + msgIdByteCount + 2 + 8 + payloadSpan.Length;
+        // Protocol: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + Payload
+        var contentSize = 1 + msgIdByteCount + 2 + payloadSpan.Length;
         var totalSize = 4 + contentSize;
         var buffer = ArrayPool<byte>.Shared.Rent(totalSize);
 
@@ -387,10 +386,6 @@ internal sealed class ClientNetwork : IAsyncDisposable
         // MsgSeq (2 bytes, little-endian)
         BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(offset), msgSeq);
         offset += 2;
-
-        // StageId (8 bytes, little-endian)
-        BinaryPrimitives.WriteInt64LittleEndian(buffer.AsSpan(offset), stageId);
-        offset += 8;
 
         // Payload - direct copy from span
         payloadSpan.CopyTo(buffer.AsSpan(offset));
@@ -468,7 +463,10 @@ internal sealed class ClientNetwork : IAsyncDisposable
             if (pending.IsAuthenticate && parsed.ErrorCode == 0)
             {
                 _isAuthenticated = true;
-                Interlocked.Exchange(ref _stageId, parsed.StageId);
+                if (TryExtractStageIdFromAuthPayload(parsed.Payload.DataSpan, out var authStageId) && authStageId > 0)
+                {
+                    Interlocked.Exchange(ref _stageId, authStageId);
+                }
             }
 
             if (parsed.ErrorCode != 0)
@@ -476,11 +474,11 @@ internal sealed class ClientNetwork : IAsyncDisposable
                 parsed.Dispose(); // Error case - dispose packet
                 if (pending.Tcs != null)
                 {
-                    pending.Tcs.TrySetException(new ConnectorException(parsed.StageId, parsed.ErrorCode, pending.Request, parsed.MsgSeq));
+                    pending.Tcs.TrySetException(new ConnectorException(StageId, parsed.ErrorCode, pending.Request, parsed.MsgSeq));
                 }
                 else if (pending.Callback != null)
                 {
-                    _callback.ErrorCallback(parsed.StageId, parsed.ErrorCode, pending.Request);
+                    _callback.ErrorCallback(StageId, parsed.ErrorCode, pending.Request);
                 }
             }
             else
@@ -510,7 +508,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
         // Push 메시지 처리 (MsgSeq == 0)
         try
         {
-            _callback.ReceiveCallback(parsed.StageId, parsed);
+            _callback.ReceiveCallback(StageId, parsed);
         }
         finally
         {
@@ -562,6 +560,92 @@ internal sealed class ClientNetwork : IAsyncDisposable
     }
 
     #endregion
+
+    private static bool TryExtractStageIdFromAuthPayload(ReadOnlySpan<byte> payload, out long stageId)
+    {
+        stageId = 0;
+        int offset = 0;
+
+        while (offset < payload.Length)
+        {
+            if (!TryReadVarint(payload, ref offset, out var tag))
+            {
+                return false;
+            }
+
+            var wireType = (int)(tag & 0x07);
+            var fieldNumber = (int)(tag >> 3);
+
+            if (fieldNumber == 2 && wireType == 0)
+            {
+                if (!TryReadVarint(payload, ref offset, out var value))
+                {
+                    return false;
+                }
+
+                stageId = (long)value;
+                return true;
+            }
+
+            if (!SkipField(payload, ref offset, wireType))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadVarint(ReadOnlySpan<byte> data, ref int offset, out ulong value)
+    {
+        value = 0;
+        int shift = 0;
+        while (offset < data.Length && shift < 64)
+        {
+            var b = data[offset++];
+            value |= (ulong)(b & 0x7F) << shift;
+            if ((b & 0x80) == 0)
+            {
+                return true;
+            }
+            shift += 7;
+        }
+
+        return false;
+    }
+
+    private static bool SkipField(ReadOnlySpan<byte> data, ref int offset, int wireType)
+    {
+        return wireType switch
+        {
+            0 => TryReadVarint(data, ref offset, out _),
+            1 => SkipBytes(data, ref offset, 8),
+            2 => SkipLengthDelimited(data, ref offset),
+            5 => SkipBytes(data, ref offset, 4),
+            _ => false
+        };
+    }
+
+    private static bool SkipLengthDelimited(ReadOnlySpan<byte> data, ref int offset)
+    {
+        if (!TryReadVarint(data, ref offset, out var len))
+        {
+            return false;
+        }
+
+        return SkipBytes(data, ref offset, (int)len);
+    }
+
+    private static bool SkipBytes(ReadOnlySpan<byte> data, ref int offset, int count)
+    {
+        if (offset + count > data.Length)
+        {
+            return false;
+        }
+
+        offset += count;
+        return true;
+    }
 
     public async ValueTask DisposeAsync()
     {

@@ -194,14 +194,14 @@ internal sealed class TcpConnection : IConnection
                     var msgIdLen = _headerBuffer[0];
 
                     // 3. Fix #7: Protocol boundary validation before reading payload
-                    // Minimum header size: MsgIdLen(1) + MsgId(1+) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) = 18 bytes
+                    // Minimum header size: MsgIdLen(1) + MsgId(1+) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) = 10 bytes
                     // Validate msgIdLen is within bounds (1-255) and reasonable (1-128 practical limit)
                     if (msgIdLen == 0 || msgIdLen > 128)
                     {
                         throw new InvalidOperationException($"Invalid MsgIdLen: {msgIdLen}");
                     }
 
-                    var fixedHeaderSize = msgIdLen + 16; // MsgId + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4)
+                    var fixedHeaderSize = msgIdLen + 8; // MsgId + MsgSeq(2) + ErrorCode(2) + OriginalSize(4)
                     var headerTotalSize = 1 + fixedHeaderSize; // MsgIdLen(1) + fixedHeaderSize
 
                     if (contentSize < headerTotalSize)
@@ -224,8 +224,6 @@ internal sealed class TcpConnection : IConnection
                     var offset = msgIdLen;
                     var msgSeq = BinaryPrimitives.ReadUInt16LittleEndian(_headerBuffer.AsSpan(offset));
                     offset += 2;
-                    var stageId = BinaryPrimitives.ReadInt64LittleEndian(_headerBuffer.AsSpan(offset));
-                    offset += 8;
                     var errorCode = BinaryPrimitives.ReadUInt16LittleEndian(_headerBuffer.AsSpan(offset));
                     offset += 2;
                     var originalSize = BinaryPrimitives.ReadInt32LittleEndian(_headerBuffer.AsSpan(offset));
@@ -282,7 +280,7 @@ internal sealed class TcpConnection : IConnection
                     }
 
                     // 7. Create packet and raise event
-                    var packet = new ParsedPacket(msgId, msgSeq, stageId, errorCode, payload);
+                    var packet = new ParsedPacket(msgId, msgSeq, 0, errorCode, payload);
                     PacketReceived?.Invoke(this, packet);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

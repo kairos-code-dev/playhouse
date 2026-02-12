@@ -152,7 +152,7 @@ internal sealed class XActorLink : IActorLink
     }
 
     /// <inheritdoc/>
-    public void SetAuthContext(string accountId, string stageType)
+    public void SetAuthSingleContext(string accountId, string stageType)
     {
         if (string.IsNullOrWhiteSpace(accountId))
             throw new ArgumentException("AccountId must not be empty.", nameof(accountId));

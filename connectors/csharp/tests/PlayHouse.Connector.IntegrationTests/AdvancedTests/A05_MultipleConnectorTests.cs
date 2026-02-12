@@ -73,9 +73,7 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
         var connectTasks = connectors.Select((connector, index) =>
             connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                _stages[index].StageId,
-                _stages[index].StageType
+                _testServer.TcpPort
             )
         ).ToList();
 
@@ -96,9 +94,7 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
             var connector = CreateConnector();
             await connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                _stages[i].StageId,
-                _stages[i].StageType
+                _testServer.TcpPort
             );
             connectors.Add(connector);
         }
@@ -111,6 +107,7 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
                 UserId = $"user-{index}",
                 Token = "valid_token"
             };
+            await _testServer.AssignStageAsync(authRequest.UserId, _stages[index].StageId);
             using var packet = new Packet(authRequest);
             return await connector.AuthenticateAsync(packet);
         }).ToList();
@@ -137,12 +134,11 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
             var connector = CreateConnector();
             await connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                _stages[i].StageId,
-                _stages[i].StageType
+                _testServer.TcpPort
             );
 
             var authRequest = new AuthenticateRequest { UserId = $"parallel-user-{i}", Token = "valid_token" };
+            await _testServer.AssignStageAsync(authRequest.UserId, _stages[i].StageId);
             using var authPacket = new Packet(authRequest);
             await connector.AuthenticateAsync(authPacket);
 
@@ -182,12 +178,11 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
             var connector = CreateConnector();
             await connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                _stages[i].StageId,
-                _stages[i].StageType
+                _testServer.TcpPort
             );
 
             var authRequest = new AuthenticateRequest { UserId = $"disconnect-test-{i}", Token = "valid_token" };
+            await _testServer.AssignStageAsync(authRequest.UserId, _stages[i].StageId);
             using var authPacket = new Packet(authRequest);
             await connector.AuthenticateAsync(authPacket);
 
@@ -226,12 +221,11 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
             var connector = CreateConnector();
             await connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                sharedStage.StageId,
-                sharedStage.StageType
+                _testServer.TcpPort
             );
 
             var authRequest = new AuthenticateRequest { UserId = $"same-stage-user-{i}", Token = "valid_token" };
+            await _testServer.AssignStageAsync(authRequest.UserId, sharedStage.StageId);
             using var authPacket = new Packet(authRequest);
             await connector.AuthenticateAsync(authPacket);
 
@@ -273,9 +267,7 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
             var stage = extraStages[i];
             connectTasks.Add(connector.ConnectAsync(
                 _testServer.Host,
-                _testServer.TcpPort,
-                stage.StageId,
-                stage.StageType
+                _testServer.TcpPort
             ));
         }
 
@@ -322,10 +314,12 @@ public class A05_MultipleConnectorTests : IClassFixture<TestServerFixture>, IAsy
         await connector2.ConnectAsync(_testServer.Host, _testServer.TcpPort);
 
         var auth1 = new AuthenticateRequest { UserId = "event-user-1", Token = "valid_token" };
+        await _testServer.AssignStageAsync(auth1.UserId, _stages[0].StageId);
         using var auth1Packet = new Packet(auth1);
         await connector1.AuthenticateAsync(auth1Packet);
 
         var auth2 = new AuthenticateRequest { UserId = "event-user-2", Token = "valid_token" };
+        await _testServer.AssignStageAsync(auth2.UserId, _stages[1].StageId);
         using var auth2Packet = new Packet(auth2);
         await connector2.AuthenticateAsync(auth2Packet);
 

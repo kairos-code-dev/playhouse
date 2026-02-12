@@ -90,6 +90,7 @@ export function serializeAuthenticateRequest(request: AuthenticateRequest): Uint
  */
 export interface AuthenticateReply {
     accountId: string;
+    stageId: bigint;
     success: boolean;
     receivedUserId: string;
     receivedToken: string;
@@ -101,6 +102,7 @@ export interface AuthenticateReply {
 export function parseAuthenticateReply(data: Uint8Array): AuthenticateReply {
     const reply: AuthenticateReply = {
         accountId: '',
+        stageId: 0n,
         success: false,
         receivedUserId: '',
         receivedToken: ''
@@ -122,10 +124,10 @@ export function parseAuthenticateReply(data: Uint8Array): AuthenticateReply {
                     offset = nextOffset;
                 }
                 break;
-            case 2: // success (bool as varint)
+            case 2: // stage_id (int64 as varint)
                 if (wireType === 0) {
                     const [value, nextOffset] = readVarint(data, offset);
-                    reply.success = value !== 0;
+                    reply.stageId = BigInt(value);
                     offset = nextOffset;
                 }
                 break;
@@ -140,6 +142,13 @@ export function parseAuthenticateReply(data: Uint8Array): AuthenticateReply {
                 if (wireType === 2) {
                     const [str, nextOffset] = readString(data, offset);
                     reply.receivedToken = str;
+                    offset = nextOffset;
+                }
+                break;
+            case 5: // success (bool as varint)
+                if (wireType === 0) {
+                    const [value, nextOffset] = readVarint(data, offset);
+                    reply.success = value !== 0;
                     offset = nextOffset;
                 }
                 break;

@@ -56,15 +56,14 @@ public class A07_TlsConnectionTests : IClassFixture<TestServerFixture>, IAsyncLi
 
         var connected = await _connector.ConnectAsync(
             _testServer.Host,
-            _testServer.TcpTlsPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.TcpTlsPort
         );
 
         Assert.True(connected);
         Assert.True(_connector.IsConnected());
 
         var authRequest = new AuthenticateRequest { UserId = "tls-user-1", Token = "valid_token" };
+        await _testServer.AssignStageAsync(authRequest.UserId, _stageInfo!.StageId);
         using var authPacket = new Packet(authRequest);
         var authReplyPacket = await _connector.AuthenticateAsync(authPacket);
         var authReply = AuthenticateReply.Parser.ParseFrom(authReplyPacket.Payload.DataSpan.ToArray());
@@ -92,15 +91,14 @@ public class A07_TlsConnectionTests : IClassFixture<TestServerFixture>, IAsyncLi
 
         var connected = await _connector.ConnectAsync(
             _testServer.Host,
-            _testServer.HttpsPort,
-            _stageInfo!.StageId,
-            _stageInfo.StageType
+            _testServer.HttpsPort
         );
 
         Assert.True(connected);
         Assert.True(_connector.IsConnected());
 
         var authRequest = new AuthenticateRequest { UserId = "wss-user-1", Token = "valid_token" };
+        await _testServer.AssignStageAsync(authRequest.UserId, _stageInfo!.StageId);
         using var authPacket = new Packet(authRequest);
         var authReplyPacket = await _connector.AuthenticateAsync(authPacket);
         var authReply = AuthenticateReply.Parser.ParseFrom(authReplyPacket.Payload.DataSpan.ToArray());

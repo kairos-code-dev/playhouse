@@ -174,12 +174,10 @@ public class A03_SendMethodTests : BaseIntegrationTest
             HeartBeatIntervalMs = 10000
         });
 
-        var newStage = await TestServer.CreateTestStageAsync();
+        await TestServer.CreateTestStageAsync();
         await newConnector.ConnectAsync(
             TestServer.Host,
-            TestServer.TcpPort,
-            newStage.StageId,
-            newStage.StageType
+            TestServer.TcpPort
         );
 
         var errorFired = false;

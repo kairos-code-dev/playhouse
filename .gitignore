@@ -95,3 +95,5 @@ tests/benchmark_echo/cpp_client/third_party/boost_*/
 
 # Unreal connector release artifacts
 connectors/unreal/dist/
+# Dev TLS private key for connector test-server (do not commit)
+connectors/test-server/certs/server.key

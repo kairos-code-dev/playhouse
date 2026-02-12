@@ -11,8 +11,8 @@ import java.nio.charset.StandardCharsets;
 /**
  * 패킷 인코딩/디코딩
  * <p>
- * Request Packet: ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + Payload(...)
- * Response Packet: ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) + Payload(...)
+ * Request Packet: ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + Payload(...)
+ * Response Packet: ContentSize(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4) + Payload(...)
  * <p>
  * Byte Order: Little-endian
  */
@@ -34,9 +34,9 @@ public final class PacketCodec {
     public static final int MAX_DECOMPRESSION_RATIO = 100;
 
     /**
-     * Minimum header size: ContentSize(4) + MsgIdLen(1) + MsgId(1) + MsgSeq(2) + StageId(8)
+     * Minimum request header size: ContentSize(4) + MsgIdLen(1) + MsgId(1) + MsgSeq(2)
      */
-    private static final int MIN_HEADER_SIZE = 16;
+    private static final int MIN_HEADER_SIZE = 8;
 
     private PacketCodec() {
         // Utility class
@@ -47,15 +47,15 @@ public final class PacketCodec {
      *
      * @param packet  패킷
      * @param msgSeq  메시지 시퀀스
-     * @param stageId Stage ID
+     * @param stageId Unused (kept for call-site compatibility)
      * @return 인코딩된 ByteBuffer
      */
     public static ByteBuffer encodeRequest(Packet packet, short msgSeq, long stageId) {
         byte[] msgIdBytes = packet.getMsgId().getBytes(StandardCharsets.UTF_8);
         byte[] payload = packet.getPayload();
 
-        // ContentSize = MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + Payload(...)
-        int contentSize = 1 + msgIdBytes.length + 2 + 8 + payload.length;
+        // ContentSize = MsgIdLen(1) + MsgId(N) + MsgSeq(2) + Payload(...)
+        int contentSize = 1 + msgIdBytes.length + 2 + payload.length;
         int totalSize = 4 + contentSize;
 
         ByteBuffer buffer = ByteBuffer.allocate(totalSize).order(ByteOrder.LITTLE_ENDIAN);
@@ -65,14 +65,13 @@ public final class PacketCodec {
         buffer.put((byte) msgIdBytes.length);            // MsgIdLen (1)
         buffer.put(msgIdBytes);                          // MsgId (N)
         buffer.putShort(msgSeq);                         // MsgSeq (2)
-        buffer.putLong(stageId);                         // StageId (8)
         buffer.put(payload);                             // Payload (...)
 
         buffer.flip();
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Encoded request packet: msgId={}, msgSeq={}, stageId={}, payloadSize={}",
-                packet.getMsgId(), msgSeq, stageId, payload.length);
+            logger.debug("Encoded request packet: msgId={}, msgSeq={}, payloadSize={}",
+                packet.getMsgId(), msgSeq, payload.length);
         }
 
         return buffer;
@@ -118,9 +117,9 @@ public final class PacketCodec {
         int msgIdLen = buffer.get() & 0xFF;
 
         // Validate msgIdLen - it must fit within contentSize along with other fields
-        // Response header after ContentSize: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4)
-        // Minimum overhead = 1 + 2 + 8 + 2 + 4 = 17 bytes
-        int minContentSizeForMsgId = 17 + msgIdLen;
+        // Response header after ContentSize: MsgIdLen(1) + MsgId(N) + MsgSeq(2) + ErrorCode(2) + OriginalSize(4)
+        // Minimum overhead = 1 + 2 + 2 + 4 = 9 bytes
+        int minContentSizeForMsgId = 9 + msgIdLen;
         if (msgIdLen == 0 || msgIdLen > 255) {
             throw new IllegalArgumentException("Invalid msgIdLen: " + msgIdLen);
         }
@@ -142,17 +141,14 @@ public final class PacketCodec {
         String msgId = new String(msgIdBytes, StandardCharsets.UTF_8);
 
         // Validate remaining fields can be read
-        // Need: MsgSeq(2) + StageId(8) + ErrorCode(2) + OriginalSize(4) = 16 bytes minimum
-        if (buffer.remaining() < 16) {
+        // Need: MsgSeq(2) + ErrorCode(2) + OriginalSize(4) = 8 bytes minimum
+        if (buffer.remaining() < 8) {
             throw new IllegalArgumentException(
-                String.format("Not enough data for remaining header fields: need 16, have %d", buffer.remaining()));
+                String.format("Not enough data for remaining header fields: need 8, have %d", buffer.remaining()));
         }
 
         // Read MsgSeq
         short msgSeq = buffer.getShort();
-
-        // Read StageId
-        long stageId = buffer.getLong();
 
         // Read ErrorCode
         short errorCode = buffer.getShort();
@@ -192,13 +188,13 @@ public final class PacketCodec {
         buffer.get(payload);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Decoded response packet: msgId={}, msgSeq={}, stageId={}, errorCode={}, originalSize={}, payloadSize={}",
-                msgId, msgSeq, stageId, errorCode, originalSize, payloadSize);
+            logger.debug("Decoded response packet: msgId={}, msgSeq={}, errorCode={}, originalSize={}, payloadSize={}",
+                msgId, msgSeq, errorCode, originalSize, payloadSize);
         }
 
         return Packet.builder(msgId)
             .msgSeq(msgSeq)
-            .stageId(stageId)
+            .stageId(0L)
             .errorCode(errorCode)
             .originalSize(originalSize)
             .payload(payload)
