@@ -46,7 +46,7 @@ public class BenchmarkApiController : IApiController
         {
             link.Reply(replyPacket);
         }
-        else if (link.StageId != 0)
+        else if (!string.IsNullOrEmpty(link.StageId))
         {
             link.SendToStage(link.FromNid, link.StageId, replyPacket);
         }

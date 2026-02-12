@@ -93,10 +93,10 @@ public abstract class XLink : ILink
     /// Gets the link's Stage ID for Stage-to-Stage communication.
     /// Override this in XStageLink to return the actual StageId.
     /// </summary>
-    /// <returns>Stage ID for the link (0 if not a Stage).</returns>
-    protected virtual long GetSenderStageId()
+    /// <returns>Stage ID for the link (empty if not a Stage).</returns>
+    protected virtual string GetSenderStageId()
     {
-        return 0;
+        return string.Empty;
     }
 
     /// <summary>
@@ -203,14 +203,14 @@ public abstract class XLink : ILink
     #region Stage Communication
 
     /// <inheritdoc/>
-    public void SendToStage(string playServerId, long stageId, IPacket packet)
+    public void SendToStage(string playServerId, string stageId, IPacket packet)
     {
         var header = CreateStageHeader(packet.MsgId, msgSeq: 0, stageId);
         SendInternal(playServerId, header, packet.Payload);
     }
 
     /// <inheritdoc/>
-    public void RequestToStage(string playServerId, long stageId, IPacket packet, ReplyCallback replyCallback)
+    public void RequestToStage(string playServerId, string stageId, IPacket packet, ReplyCallback replyCallback)
     {
         var msgSeq = NextMsgSeq();
         var replyObject = ReplyObject.CreateCallback(msgSeq, replyCallback, GetPostToStageCallback());
@@ -219,7 +219,7 @@ public abstract class XLink : ILink
     }
 
     /// <inheritdoc/>
-    public async Task<IPacket> RequestToStage(string playServerId, long stageId, IPacket packet)
+    public async Task<IPacket> RequestToStage(string playServerId, string stageId, IPacket packet)
     {
         var msgSeq = NextMsgSeq();
         var (replyObject, task) = ReplyObject.CreateAsync(msgSeq);
@@ -294,9 +294,8 @@ public abstract class XLink : ILink
             return; // Not a request, no reply needed
         }
 
-        // For Stage-to-Stage communication: AccountId in request contains the sender's StageId
-        // Reply should be routed back to that Stage
-        var replyStageId = CurrentHeader.AccountId;
+        // Keep stage routing context from the current request header.
+        var replyStageId = CurrentHeader.StageId;
         var replyAccountId = CurrentHeader.AccountId;
 
         var replyHeader = CreateReplyHeader(reply.MsgId, (ushort)CurrentHeader.MsgSeq, 0, replyStageId, replyAccountId);
@@ -307,7 +306,7 @@ public abstract class XLink : ILink
 
     #region Internal Methods
 
-    private RouteHeader CreateHeader(string msgId, ushort msgSeq, long stageId = 0, long accountId = 0, long sid = 0)
+    private RouteHeader CreateHeader(string msgId, ushort msgSeq, string stageId = "", long accountId = 0, long sid = 0)
     {
         return new RouteHeader
         {
@@ -330,16 +329,10 @@ public abstract class XLink : ILink
         return CreateHeader(msgId, msgSeq, stageId, accountId, sid);
     }
 
-    private RouteHeader CreateStageHeader(string msgId, ushort msgSeq, long stageId)
+    private RouteHeader CreateStageHeader(string msgId, ushort msgSeq, string stageId)
     {
-        // Determine AccountId for reply routing:
-        // - If CurrentHeader exists with AccountId (Actor context), preserve it
-        // - Otherwise, use sender's StageId (Stage-to-Stage direct communication)
+        // Preserve Actor account context when available.
         var accountId = CurrentHeader?.AccountId ?? 0;
-        if (accountId == 0)
-        {
-            accountId = GetSenderStageId();
-        }
 
         // Stage-to-Stage communication: Sid should be 0 (not a client session)
         return CreateHeader(msgId, msgSeq, stageId, accountId, sid: 0);
@@ -352,7 +345,7 @@ public abstract class XLink : ILink
         return header;
     }
 
-    private RouteHeader CreateReplyHeader(string msgId, ushort msgSeq, ushort errorCode, long stageId = 0, long accountId = 0)
+    private RouteHeader CreateReplyHeader(string msgId, ushort msgSeq, ushort errorCode, string stageId = "", long accountId = 0)
     {
         return new RouteHeader
         {

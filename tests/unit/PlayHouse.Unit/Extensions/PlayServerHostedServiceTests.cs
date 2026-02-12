@@ -117,7 +117,7 @@ public class PlayServerHostedServiceTests
         public Task OnDestroy() => Task.CompletedTask;
         public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
         {
-            ActorLink.SetAuthContext("1", 1L);
+            ActorLink.SetAuthSingleContext("1", "TestStage");
             return Task.FromResult<(bool, IPacket?)>((true, null));
         }
         public Task OnPostAuthenticate() => Task.CompletedTask;
@@ -135,7 +135,7 @@ public class PlayServerHostedServiceTests
             options.TcpPort = 0;
             options.AuthenticateMessageId = "Auth";
         })
-        .UseStage<TestStage, TestActor>("TestStage")
+        .UseStage<TestStage, TestActor>("TestStage", StageMode.Single)
         .UseSystemController<TestSystemController>();
 
         var serviceProvider = services.BuildServiceProvider();
@@ -162,7 +162,7 @@ public class PlayServerHostedServiceTests
             options.AuthenticateMessageId = "Auth";
             options.DefaultStageType = "TestStage";
         })
-        .UseStage<TestStage, TestActor>("TestStage")
+        .UseStage<TestStage, TestActor>("TestStage", StageMode.Single)
         .UseSystemController<TestSystemController>();
 
         var serviceProvider = services.BuildServiceProvider();
@@ -204,7 +204,7 @@ public class PlayServerHostedServiceTests
             options.AuthenticateMessageId = "Auth";
             options.DefaultStageType = "TestStage";
         })
-        .UseStage<TestStage, TestActor>("TestStage")
+        .UseStage<TestStage, TestActor>("TestStage", StageMode.Single)
         .UseSystemController<TestSystemController>();
 
         var serviceProvider = services.BuildServiceProvider();
@@ -217,8 +217,8 @@ public class PlayServerHostedServiceTests
             await hostedService.StartAsync(CancellationToken.None);
 
             // When
-            var created = playServer.CreateStageIfNotExists(42, "TestStage");
-            var createdAgain = playServer.CreateStageIfNotExists(42, "TestStage");
+            var created = playServer.CreateStageIfNotExists("42", "TestStage");
+            var createdAgain = playServer.CreateStageIfNotExists("42", "TestStage");
 
             // Then
             created.Should().BeTrue();
@@ -247,7 +247,7 @@ public class PlayServerHostedServiceTests
             options.AuthenticateMessageId = "Auth";
             options.DefaultStageType = "TestStage";
         })
-        .UseStage<TestStage, TestActor>("TestStage")
+        .UseStage<TestStage, TestActor>("TestStage", StageMode.Single)
         .UseSystemController<TestSystemController>();
 
         var serviceProvider = services.BuildServiceProvider();
@@ -315,8 +315,8 @@ public class PlayServerHostedServiceTests
             await hostedService.StartAsync(CancellationToken.None);
 
             // When
-            var firstAttempt = await playServer.CreateStageIfNotExistsAsync(84, "FailFirstPostCreateStage");
-            var secondAttempt = await playServer.CreateStageIfNotExistsAsync(84, "FailFirstPostCreateStage");
+            var firstAttempt = await playServer.CreateStageIfNotExistsAsync("84", "FailFirstPostCreateStage");
+            var secondAttempt = await playServer.CreateStageIfNotExistsAsync("84", "FailFirstPostCreateStage");
 
             // Then
             firstAttempt.Should().BeFalse("OnPostCreate 실패 시 생성 완료를 보장할 수 없으므로 false를 반환해야 함");

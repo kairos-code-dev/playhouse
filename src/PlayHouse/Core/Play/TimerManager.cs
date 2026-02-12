@@ -20,7 +20,7 @@ namespace PlayHouse.Core.Play;
 internal sealed class TimerManager : IDisposable
 {
     private readonly ConcurrentDictionary<long, TimerEntry> _timers = new();
-    private readonly Action<long, long, TimerCallbackDelegate> _dispatchCallback;
+    private readonly Action<string, long, TimerCallbackDelegate> _dispatchCallback;
     private readonly ILogger _logger;
     private bool _disposed;
 
@@ -32,7 +32,7 @@ internal sealed class TimerManager : IDisposable
     /// Parameters: stageId, timerId, callback
     /// </param>
     /// <param name="logger">Logger instance.</param>
-    public TimerManager(Action<long, long, TimerCallbackDelegate> dispatchCallback, ILogger logger)
+    public TimerManager(Action<string, long, TimerCallbackDelegate> dispatchCallback, ILogger logger)
     {
         _dispatchCallback = dispatchCallback;
         _logger = logger;
@@ -145,7 +145,7 @@ internal sealed class TimerManager : IDisposable
     /// Cancels all timers for a specific Stage.
     /// </summary>
     /// <param name="stageId">Stage ID.</param>
-    public void CancelAllForStage(long stageId)
+    public void CancelAllForStage(string stageId)
     {
         var timerIds = _timers
             .Where(kvp => kvp.Value.StageId == stageId)
@@ -199,7 +199,7 @@ internal enum TimerType
 internal sealed class TimerEntry : IDisposable
 {
     public long TimerId { get; }
-    public long StageId { get; }
+    public string StageId { get; }
     public TimerType Type { get; }
     public TimerCallbackDelegate Callback { get; }
 
@@ -209,7 +209,7 @@ internal sealed class TimerEntry : IDisposable
 
     public TimerEntry(
         long timerId,
-        long stageId,
+        string stageId,
         TimerType type,
         TimerCallbackDelegate callback,
         int count)

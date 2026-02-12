@@ -40,7 +40,7 @@ internal sealed class ZmqPlaySocket : IPlaySocket
             obj.MsgId = string.Empty;
             obj.ErrorCode = 0;
             obj.From = string.Empty;
-            obj.StageId = 0;
+            obj.StageId = string.Empty;
             obj.AccountId = 0;
             obj.Sid = 0;
             obj.IsReply = false;

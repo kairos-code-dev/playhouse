@@ -37,7 +37,7 @@ internal sealed class XStageLink : XLink, IStageLink
     private BaseStage? _baseStage;
 
     /// <inheritdoc/>
-    public long StageId { get; }
+    public string StageId { get; }
 
     /// <inheritdoc/>
     public string StageType { get; private set; } = "";
@@ -57,7 +57,7 @@ internal sealed class XStageLink : XLink, IStageLink
         ServerType serverType,
         ushort serviceId,
         string serverId,
-        long stageId,
+        string stageId,
         IPlayDispatcher dispatcher,
         IReplyPacketRegistry replyPacketRegistry,
         IClientReplyHandler? clientReplyHandler = null,
@@ -102,7 +102,7 @@ internal sealed class XStageLink : XLink, IStageLink
     /// Gets the sender's Stage ID for Stage-to-Stage communication.
     /// </summary>
     /// <returns>This Stage's ID.</returns>
-    protected override long GetSenderStageId()
+    protected override string GetSenderStageId()
     {
         return StageId;
     }
@@ -430,7 +430,7 @@ internal sealed class XStageLink : XLink, IStageLink
     /// <summary>
     /// Overrides RequestToStage to register reply packet for disposal.
     /// </summary>
-    public new async Task<IPacket> RequestToStage(string playServerId, long stageId, IPacket packet)
+    public new async Task<IPacket> RequestToStage(string playServerId, string stageId, IPacket packet)
     {
         var reply = await base.RequestToStage(playServerId, stageId, packet);
         _replyPacketRegistry.RegisterReplyForDisposal(reply);
@@ -453,7 +453,7 @@ internal sealed class XStageLink : XLink, IStageLink
 /// </summary>
 internal sealed class TimerPacket
 {
-    public long StageId { get; }
+    public string StageId { get; }
     public long TimerId { get; }
     public TimerMsg.Types.Type Type { get; }
     public long InitialDelayMs { get; }
@@ -462,7 +462,7 @@ internal sealed class TimerPacket
     public TimerCallbackDelegate Callback { get; }
 
     public TimerPacket(
-        long stageId,
+        string stageId,
         long timerId,
         TimerMsg.Types.Type type,
         long initialDelayMs,
@@ -485,11 +485,11 @@ internal sealed class TimerPacket
 /// </summary>
 internal sealed class AsyncBlockPacket
 {
-    public long StageId { get; }
+    public string StageId { get; }
     public AsyncPostCallback PostCallback { get; }
     public object? Result { get; }
 
-    public AsyncBlockPacket(long stageId, AsyncPostCallback postCallback, object? result)
+    public AsyncBlockPacket(string stageId, AsyncPostCallback postCallback, object? result)
     {
         StageId = stageId;
         PostCallback = postCallback;

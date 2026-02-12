@@ -49,8 +49,8 @@ public class DITestActor : IActor
 
     public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
     {
-        var accountId = Interlocked.Increment(ref _accountIdCounter);
-        ActorLink.SetAuthContext(accountId.ToString(), accountId);
+        var accountId = Interlocked.Increment(ref _accountIdCounter).ToString();
+        ActorLink.SetAuthSingleContext(accountId, "DITestStage");
 
         // authPacket 파싱하여 E2E 검증 가능하도록 echo
         string receivedUserId = "";

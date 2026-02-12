@@ -34,7 +34,7 @@ public interface ITransportSession : IAsyncDisposable
     /// Gets or sets the stage ID associated with this session.
     /// Set after successful authentication.
     /// </summary>
-    long StageId { get; set; }
+    string StageId { get; set; }
 
     /// <summary>
     /// Gets whether the session is currently connected.
@@ -66,7 +66,7 @@ public interface ITransportSession : IAsyncDisposable
     void SendResponse(
         string msgId,
         ushort msgSeq,
-        long stageId,
+        string stageId,
         ushort errorCode,
         ReadOnlySpan<byte> payload);
 
@@ -89,7 +89,7 @@ public delegate void MessageReceivedCallback(
     ITransportSession session,
     string msgId,
     ushort msgSeq,
-    long stageId,
+    string stageId,
     IPayload payload);
 
 /// <summary>

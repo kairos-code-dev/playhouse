@@ -202,7 +202,7 @@ public record CreateStageRequest
     /// <summary>
     /// The unique stage ID
     /// </summary>
-    public required ushort StageId { get; init; }
+    public required string StageId { get; init; }
 }
 
 /// <summary>
@@ -218,7 +218,7 @@ public record CreateStageResponse
     /// <summary>
     /// The stage ID that was created
     /// </summary>
-    public required ushort StageId { get; init; }
+    public required string StageId { get; init; }
 
     /// <summary>
     /// OnCreate reply payload info (format: "StageName:MaxPlayers")
@@ -239,7 +239,7 @@ public record GetOrCreateStageRequest
     /// <summary>
     /// The unique stage ID
     /// </summary>
-    public required ushort StageId { get; init; }
+    public required string StageId { get; init; }
 }
 
 /// <summary>
@@ -260,7 +260,7 @@ public record GetOrCreateStageResponse
     /// <summary>
     /// The stage ID that was retrieved or created
     /// </summary>
-    public required ushort StageId { get; init; }
+    public required string StageId { get; init; }
 
     /// <summary>
     /// OnCreate reply payload info (format: "StageName:MaxPlayers", only when IsCreated=true)

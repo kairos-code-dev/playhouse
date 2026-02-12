@@ -44,7 +44,7 @@ internal sealed class TcpTransportSession : ITransportSession
     public long SessionId { get; }
     public string AccountId { get; set; } = string.Empty;
     public bool IsAuthenticated { get; set; }
-    public long StageId { get; set; }
+    public string StageId { get; set; } = string.Empty;
     public bool IsConnected => !_disposed && _socket.Connected;
     public object? ProcessorContext { get; set; }
 
@@ -223,9 +223,9 @@ internal sealed class TcpTransportSession : ITransportSession
         return bytesInBuffer;
     }
 
-    private bool TryParseMessage(ReadOnlySpan<byte> span, out string msgId, out ushort msgSeq, out long stageId, out IPayload payload, out int totalPacketSize)
+    private bool TryParseMessage(ReadOnlySpan<byte> span, out string msgId, out ushort msgSeq, out string stageId, out IPayload payload, out int totalPacketSize)
     {
-        msgId = string.Empty; msgSeq = 0; stageId = 0; payload = null!; totalPacketSize = 0;
+        msgId = string.Empty; msgSeq = 0; stageId = string.Empty; payload = null!; totalPacketSize = 0;
         if (span.Length < 4) return false;
         var packetLength = BinaryPrimitives.ReadInt32LittleEndian(span);
         if (packetLength <= 0 || packetLength > _options.MaxPacketSize) throw new InvalidDataException($"Invalid packet length: {packetLength}");
@@ -263,7 +263,7 @@ internal sealed class TcpTransportSession : ITransportSession
         }
     }
 
-    public void SendResponse(string msgId, ushort msgSeq, long stageId, ushort errorCode, ReadOnlySpan<byte> payload)
+    public void SendResponse(string msgId, ushort msgSeq, string stageId, ushort errorCode, ReadOnlySpan<byte> payload)
     {
         if (_disposed) return;
 

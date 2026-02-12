@@ -36,7 +36,7 @@ public interface IApiLink : ILink
     /// <summary>
     /// Gets the originating Stage ID for the current request.
     /// </summary>
-    long StageId { get; }
+    string StageId { get; }
 
     /// <summary>
     /// Gets or sets the account ID for the current request.
@@ -61,7 +61,7 @@ public interface IApiLink : ILink
     Task<CreateStageResult> CreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket packet);
 
     /// <summary>
@@ -75,7 +75,7 @@ public interface IApiLink : ILink
     Task<GetOrCreateStageResult> GetOrCreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket createPacket);
 
     /// <summary>
@@ -89,7 +89,7 @@ public interface IApiLink : ILink
     void CreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket packet,
         CreateStageCallback callback);
 
@@ -104,7 +104,7 @@ public interface IApiLink : ILink
     void GetOrCreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket createPacket,
         GetOrCreateStageCallback callback);
 

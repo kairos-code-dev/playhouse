@@ -185,7 +185,7 @@ message LeaveStageReply {
 // SendToStage 트리거 요청 (클라이언트 → Stage A)
 message TriggerSendToStageRequest {
     string target_nid = 1;        // Target PlayServer ServerId (e.g., "1", "2")
-    int64 target_stage_id = 2;
+    string target_stage_id = 2;
     string message = 3;
 }
 message TriggerSendToStageReply {
@@ -195,7 +195,7 @@ message TriggerSendToStageReply {
 // RequestToStage 트리거 요청 (클라이언트 → Stage A)
 message TriggerRequestToStageRequest {
     string target_nid = 1;        // Target PlayServer ServerId (e.g., "1", "2")
-    int64 target_stage_id = 2;
+    string target_stage_id = 2;
     string query = 3;
 }
 message TriggerRequestToStageReply {
@@ -205,7 +205,7 @@ message TriggerRequestToStageReply {
 // RequestToStage Callback 버전 트리거 요청
 message TriggerRequestToStageCallbackRequest {
     string target_nid = 1;        // Target PlayServer ServerId (e.g., "1", "2")
-    int64 target_stage_id = 2;
+    string target_stage_id = 2;
     string query = 3;
 }
 message TriggerRequestToStageCallbackReply {
@@ -214,7 +214,7 @@ message TriggerRequestToStageCallbackReply {
 
 // Stage간 직접 전달되는 메시지 (Stage A → Stage B)
 message InterStageMessage {
-    int64 from_stage_id = 1;
+    string from_stage_id = 1;
     string content = 2;
 }
 message InterStageReply {
@@ -297,7 +297,7 @@ message TriggerRequestToApiCallbackReply {
 // CreateStage 트리거 (API → PlayServer)
 message TriggerCreateStageRequest {
     string stage_type = 1;
-    int64 stage_id = 2;
+    string stage_id = 2;
 }
 message TriggerCreateStageReply {
     bool success = 1;
@@ -306,7 +306,7 @@ message TriggerCreateStageReply {
 // GetOrCreateStage 트리거
 message TriggerGetOrCreateStageRequest {
     string stage_type = 1;
-    int64 stage_id = 2;
+    string stage_id = 2;
 }
 message TriggerGetOrCreateStageReply {
     bool is_created = 1;
@@ -365,7 +365,7 @@ message TriggerAutoDisposeApiReply {
 // OnDispatch 내 RequestToStage 자동 Dispose 테스트
 message TriggerAutoDisposeStageRequest {
     string target_nid = 1;
-    int64 target_stage_id = 2;
+    string target_stage_id = 2;
     string query = 3;
 }
 message TriggerAutoDisposeStageReply {

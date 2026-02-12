@@ -89,7 +89,7 @@ internal sealed class WebSocketTransportSession : ITransportSession
     public long SessionId { get; }
     public string AccountId { get; set; } = string.Empty;
     public bool IsAuthenticated { get; set; }
-    public long StageId { get; set; }
+    public string StageId { get; set; } = string.Empty;
     public bool IsConnected => !_disposed && _webSocket.State == WebSocketState.Open;
     public object? ProcessorContext { get; set; }
 
@@ -139,7 +139,7 @@ internal sealed class WebSocketTransportSession : ITransportSession
         }
     }
 
-    public void SendResponse(string msgId, ushort msgSeq, long stageId, ushort errorCode, ReadOnlySpan<byte> payload)
+    public void SendResponse(string msgId, ushort msgSeq, string stageId, ushort errorCode, ReadOnlySpan<byte> payload)
     {
         if (_disposed || _webSocket.State != WebSocketState.Open) return;
 

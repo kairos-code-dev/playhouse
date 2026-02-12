@@ -20,7 +20,7 @@ namespace PlayHouse.Core.Api;
 internal class ApiLink : XLink, IApiLink
 {
     private string _accountId = string.Empty;
-    private long _stageId;
+    private string _stageId = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApiLink"/> class.
@@ -50,7 +50,7 @@ internal class ApiLink : XLink, IApiLink
     }
 
     /// <inheritdoc/>
-    public long StageId => _stageId;
+    public string StageId => _stageId;
 
     /// <inheritdoc/>
     public string FromNid => CurrentHeader?.From ?? string.Empty;
@@ -75,7 +75,7 @@ internal class ApiLink : XLink, IApiLink
     public void ClearSessionContext()
     {
         ClearCurrentHeader();
-        _stageId = 0;
+        _stageId = string.Empty;
         _accountId = string.Empty;
     }
 
@@ -85,7 +85,7 @@ internal class ApiLink : XLink, IApiLink
     public async Task<CreateStageResult> CreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket packet)
     {
         var req = new CreateStageReq
@@ -109,7 +109,7 @@ internal class ApiLink : XLink, IApiLink
     public async Task<GetOrCreateStageResult> GetOrCreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket createPacket)
     {
         var req = new GetOrCreateStageReq
@@ -138,7 +138,7 @@ internal class ApiLink : XLink, IApiLink
     public void CreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket packet,
         CreateStageCallback callback)
     {
@@ -170,7 +170,7 @@ internal class ApiLink : XLink, IApiLink
     public void GetOrCreateStage(
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         IPacket createPacket,
         GetOrCreateStageCallback callback)
     {

@@ -19,10 +19,10 @@ namespace PlayHouse.Core.Play;
 /// </remarks>
 internal sealed class GameLoopTimer : IDisposable
 {
-    private readonly long _stageId;
+    private readonly string _stageId;
     private readonly GameLoopConfig _config;
     private readonly GameLoopCallback _callback;
-    private readonly Action<long, GameLoopCallback, TimeSpan, TimeSpan> _dispatchCallback;
+    private readonly Action<string, GameLoopCallback, TimeSpan, TimeSpan> _dispatchCallback;
     private readonly ILogger _logger;
 
     private Thread? _thread;
@@ -46,10 +46,10 @@ internal sealed class GameLoopTimer : IDisposable
     /// </param>
     /// <param name="logger">Logger instance.</param>
     public GameLoopTimer(
-        long stageId,
+        string stageId,
         GameLoopConfig config,
         GameLoopCallback callback,
-        Action<long, GameLoopCallback, TimeSpan, TimeSpan> dispatchCallback,
+        Action<string, GameLoopCallback, TimeSpan, TimeSpan> dispatchCallback,
         ILogger logger)
     {
         _stageId = stageId;

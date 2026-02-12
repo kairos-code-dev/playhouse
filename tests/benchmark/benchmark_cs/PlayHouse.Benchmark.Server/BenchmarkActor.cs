@@ -36,7 +36,7 @@ public class BenchmarkActor : IActor
     public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
     {
         var accountId = Interlocked.Increment(ref _accountIdCounter);
-        ActorLink.SetAuthContext(accountId.ToString(), accountId);
+        ActorLink.SetAuthContext(accountId.ToString(), accountId.ToString());
 
         // 벤치마크에서는 reply packet 없이 간단히 true 반환
         return Task.FromResult<(bool, IPacket?)>((true, null));

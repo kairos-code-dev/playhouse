@@ -8,13 +8,13 @@ option csharp_namespace = "PlayHouse.Benchmark.SS.Shared.Proto";
 message CreateStageRequest {
     string play_nid = 1;
     string stage_type = 2;
-    int64 stage_id = 3;
+    string stage_id = 3;
 }
 
 message CreateStageReply {
     bool success = 1;
     int32 error_code = 2;
-    int64 stage_id = 3;
+    string stage_id = 3;
     string play_nid = 4;
     string error_message = 5;
 }

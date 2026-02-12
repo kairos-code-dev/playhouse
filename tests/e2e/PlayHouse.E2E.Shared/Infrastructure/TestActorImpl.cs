@@ -62,17 +62,19 @@ public class TestActorImpl : IActor
             }
         }
 
-        if (string.Equals(receivedToken, "single-stage", StringComparison.OrdinalIgnoreCase))
+        if (TryParseMultiStageId(receivedToken, out var multiStageId))
+        {
+            var accountId = string.IsNullOrWhiteSpace(receivedUserId)
+                ? Interlocked.Increment(ref _accountIdCounter).ToString()
+                : receivedUserId;
+            ActorLink.SetAuthContext(accountId, multiStageId.ToString());
+        }
+        else
         {
             var singleAccountId = string.IsNullOrWhiteSpace(receivedUserId)
                 ? $"single-{Interlocked.Increment(ref _accountIdCounter)}"
                 : receivedUserId;
             ActorLink.SetAuthSingleContext(singleAccountId, "SingleStage");
-        }
-        else
-        {
-            var accountId = Interlocked.Increment(ref _accountIdCounter);
-            ActorLink.SetAuthContext(accountId.ToString(), accountId);
         }
 
         _logger.LogInformation("OnAuthenticate called for AccountId={AccountId}", ActorLink.AccountId);
@@ -92,5 +94,19 @@ public class TestActorImpl : IActor
     public Task OnPostAuthenticate()
     {
         return Task.CompletedTask;
+    }
+
+    private static bool TryParseMultiStageId(string token, out long stageId)
+    {
+        const string prefix = "multi-stage:";
+        stageId = 0;
+
+        if (!token.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var raw = token[prefix.Length..];
+        return long.TryParse(raw, out stageId) && stageId > 0;
     }
 }

@@ -26,17 +26,18 @@ public interface IActorLink : ILink
     /// Gets or sets the stage identifier assigned to this Actor.
     /// </summary>
     /// <remarks>
-    /// MUST be set to a positive value in IActor.OnAuthenticate() upon successful authentication.
-    /// If 0 or negative after OnAuthenticate completes, connection will be terminated.
+    /// MUST be set in IActor.OnAuthenticate() upon successful authentication.
+    /// Server internally resolves this value to a transport-level numeric Stage ID.
+    /// If empty after OnAuthenticate completes, connection will be terminated unless SetAuthSingleContext() is used.
     /// </remarks>
-    long StageId { get; set; }
+    string StageId { get; set; }
 
     /// <summary>
     /// Sets AccountId and StageId together for authenticated context.
     /// </summary>
     /// <param name="accountId">Account identifier.</param>
-    /// <param name="stageId">Assigned stage identifier (must be positive).</param>
-    void SetAuthContext(string accountId, long stageId);
+    /// <param name="stageId">Assigned stage identifier string.</param>
+    void SetAuthContext(string accountId, string stageId);
 
     /// <summary>
     /// Sets AccountId and StageType for single-stage authentication context.

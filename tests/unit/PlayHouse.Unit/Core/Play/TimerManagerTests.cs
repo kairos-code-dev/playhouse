@@ -18,7 +18,7 @@ namespace PlayHouse.Unit.Core.Play;
 /// </summary>
 public class TimerManagerTests : IDisposable
 {
-    private readonly List<(long stageId, long timerId, TimerCallbackDelegate callback)> _dispatchedTimers = new();
+    private readonly List<(string stageId, long timerId, TimerCallbackDelegate callback)> _dispatchedTimers = new();
     private readonly TimerManager _timerManager;
 
     public TimerManagerTests()
@@ -139,7 +139,7 @@ public class TimerManagerTests : IDisposable
         lock (_dispatchedTimers)
         {
             _dispatchedTimers.Count.Should().BeGreaterOrEqualTo(2, "최소 2번 이상 콜백이 디스패치되어야 함");
-            _dispatchedTimers.All(t => t.stageId == stageId && t.timerId == timerId)
+            _dispatchedTimers.All(t => t.stageId == stageId.ToString() && t.timerId == timerId)
                 .Should().BeTrue("모든 콜백이 올바른 StageId와 TimerId를 가져야 함");
         }
     }
@@ -189,7 +189,7 @@ public class TimerManagerTests : IDisposable
         _timerManager.ActiveTimerCount.Should().Be(3, "3개의 타이머가 추가되어야 함");
 
         // When (행동)
-        _timerManager.CancelAllForStage(targetStageId);
+        _timerManager.CancelAllForStage(targetStageId.ToString());
 
         // Then (결과)
         _timerManager.ActiveTimerCount.Should().Be(1, "대상 Stage의 타이머만 취소되어야 함");
@@ -259,7 +259,7 @@ public class TimerManagerTests : IDisposable
         int count)
     {
         return new TimerPacket(
-            stageId,
+            stageId.ToString(),
             timerId,
             type,
             initialDelayMs,

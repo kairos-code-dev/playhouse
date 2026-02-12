@@ -33,18 +33,18 @@ internal interface IPlayDispatcher
     /// <param name="stageId">Target Stage ID.</param>
     /// <param name="config">Game loop configuration.</param>
     /// <param name="callback">Callback invoked on each tick.</param>
-    void StartGameLoop(long stageId, GameLoopConfig config, GameLoopCallback callback);
+    void StartGameLoop(string stageId, GameLoopConfig config, GameLoopCallback callback);
 
     /// <summary>
     /// Stops the game loop for the specified Stage.
     /// </summary>
     /// <param name="stageId">Target Stage ID.</param>
-    void StopGameLoop(long stageId);
+    void StopGameLoop(string stageId);
 
     /// <summary>
     /// Gets whether a game loop is running for the specified Stage.
     /// </summary>
     /// <param name="stageId">Target Stage ID.</param>
     /// <returns>True if a game loop is running.</returns>
-    bool IsGameLoopRunning(long stageId);
+    bool IsGameLoopRunning(string stageId);
 }

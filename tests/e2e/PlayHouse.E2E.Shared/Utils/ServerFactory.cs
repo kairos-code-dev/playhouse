@@ -147,7 +147,7 @@ public static class ServerFactory
             options.AuthenticateMessageId = authenticateMessageId;
             options.DefaultStageType = defaultStageType;
         })
-        .UseStage<DITestStage, DITestActor>(defaultStageType)
+        .UseStage<DITestStage, DITestActor>(defaultStageType, StageMode.Single)
         .UseSystemController<TestSystemController>();
 
         var serviceProvider = services.BuildServiceProvider();

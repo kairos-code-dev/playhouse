@@ -90,7 +90,7 @@ public class BaseStageTests
         }
         public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
         {
-            ActorLink.SetAuthContext("1", 1L);
+            ActorLink.SetAuthContext("1", "1");
             return Task.FromResult<(bool, IPacket?)>((true, null));
         }
         public Task OnPostAuthenticate() => Task.CompletedTask;
@@ -113,7 +113,7 @@ public class BaseStageTests
             ServerType.Play,
             1,
             "play-1",
-            100,
+            "100",
             dispatcher,
             replyRegistry);
 

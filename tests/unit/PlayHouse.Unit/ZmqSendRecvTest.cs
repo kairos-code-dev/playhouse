@@ -137,7 +137,7 @@ public class ZmqSendRecvTest : IDisposable
             MsgSeq = 1,
             ServiceId = 100,
             From = "client1",
-            StageId = 12345
+            StageId = "12345"
         };
         var payload = Encoding.UTF8.GetBytes("Test payload data");
         var packet = RoutePacket.Of(header, payload);
@@ -149,7 +149,7 @@ public class ZmqSendRecvTest : IDisposable
         receivedPacket.Should().NotBeNull();
         receivedPacket!.MsgId.Should().Be("TestMessage");
         receivedPacket.MsgSeq.Should().Be(1);
-        receivedPacket.StageId.Should().Be(12345);
+        receivedPacket.StageId.Should().Be("12345");
         receivedPacket.From.Should().Be("client1");
         Encoding.UTF8.GetString(receivedPacket.Payload.DataSpan).Should().Be("Test payload data");
 
@@ -182,7 +182,7 @@ public class ZmqSendRecvTest : IDisposable
             MsgSeq = 42,
             ServiceId = 200,
             From = "self1",
-            StageId = 99999
+            StageId = "99999"
         };
         var payload = Encoding.UTF8.GetBytes("Self-send test");
         var packet = RoutePacket.Of(header, payload);
@@ -194,7 +194,7 @@ public class ZmqSendRecvTest : IDisposable
         receivedPacket.Should().NotBeNull();
         receivedPacket!.MsgId.Should().Be("SelfMessage");
         receivedPacket.MsgSeq.Should().Be(42);
-        receivedPacket.StageId.Should().Be(99999);
+        receivedPacket.StageId.Should().Be("99999");
         receivedPacket.From.Should().Be("self1");
         Encoding.UTF8.GetString(receivedPacket.Payload.DataSpan).Should().Be("Self-send test");
 

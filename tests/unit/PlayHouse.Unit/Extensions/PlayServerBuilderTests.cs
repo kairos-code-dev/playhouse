@@ -40,7 +40,7 @@ public class PlayServerBuilderTests
         public Task OnDestroy() => Task.CompletedTask;
         public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
         {
-            ActorLink.SetAuthContext("1", 1L);
+            ActorLink.SetAuthContext("1", "1");
             return Task.FromResult<(bool, IPacket?)>((true, null));
         }
         public Task OnPostAuthenticate() => Task.CompletedTask;

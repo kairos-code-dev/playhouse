@@ -154,7 +154,7 @@ public sealed class RoutePacket : IDisposable
     public ushort MsgSeq => (ushort)Header.MsgSeq;
     public ushort ErrorCode => (ushort)Header.ErrorCode;
     public string From => Header.From;
-    public long StageId => Header.StageId;
+    public string StageId => Header.StageId;
     public long AccountId => Header.AccountId;
     public long Sid => Header.Sid;
     public bool IsError => Header.ErrorCode != 0;

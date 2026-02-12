@@ -60,11 +60,11 @@ public class ApiToPlayVerifier : VerifierBase
     private async Task Test_CreateStage_Success()
     {
         // Given
-        var stageId = GenerateUniqueStageId(10000);
+        var stageId = GenerateUniqueStageId(10000).ToString();
         var request = new CreateStageRequest
         {
             StageType = "TestStage",
-            StageId = (ushort)stageId
+            StageId = stageId
         };
 
         // When - HTTP POST /api/stages
@@ -74,7 +74,7 @@ public class ApiToPlayVerifier : VerifierBase
 
         // Then - E2E 검증 (HTTP 응답만)
         Assert.IsTrue(result!.Success, "CreateStage should succeed");
-        Assert.Equals((ushort)stageId, result.StageId);
+        Assert.Equals(stageId, result.StageId);
 
         // OnCreate에 packet이 전달되었는지 검증 (reply에서 echo된 값 확인)
         Assert.IsTrue(result.ReplyPayloadId != null, "OnCreate should return reply with payload info");
@@ -88,11 +88,11 @@ public class ApiToPlayVerifier : VerifierBase
     private async Task Test_GetOrCreateStage_NewStage()
     {
         // Given
-        var stageId = GenerateUniqueStageId(11000);
+        var stageId = GenerateUniqueStageId(11000).ToString();
         var request = new GetOrCreateStageRequest
         {
             StageType = "TestStage",
-            StageId = (ushort)stageId
+            StageId = stageId
         };
 
         // When - HTTP POST /api/stages/get-or-create
@@ -103,7 +103,7 @@ public class ApiToPlayVerifier : VerifierBase
         // Then - 새로운 Stage 생성 확인
         Assert.IsTrue(result!.Success, "GetOrCreateStage should succeed");
         Assert.IsTrue(result.IsCreated, "Stage should be newly created");
-        Assert.Equals((ushort)stageId, result.StageId);
+        Assert.Equals(stageId, result.StageId);
 
         // OnCreate에 packet이 전달되었는지 검증 (reply에서 echo된 값 확인)
         Assert.IsTrue(result.ReplyPayloadId != null, "OnCreate should return reply with payload info");
@@ -116,11 +116,11 @@ public class ApiToPlayVerifier : VerifierBase
     private async Task Test_GetOrCreateStage_ExistingStage()
     {
         // Given - 먼저 Stage 생성
-        var stageId = GenerateUniqueStageId(12000);
+        var stageId = GenerateUniqueStageId(12000).ToString();
         var createRequest = new CreateStageRequest
         {
             StageType = "TestStage",
-            StageId = (ushort)stageId
+            StageId = stageId
         };
         var createResponse = await _httpClient!.PostAsJsonAsync("/api/stages", createRequest);
         createResponse.EnsureSuccessStatusCode();
@@ -131,7 +131,7 @@ public class ApiToPlayVerifier : VerifierBase
         var getOrCreateRequest = new GetOrCreateStageRequest
         {
             StageType = "TestStage",
-            StageId = (ushort)stageId
+            StageId = stageId
         };
         var response = await _httpClient!.PostAsJsonAsync("/api/stages/get-or-create", getOrCreateRequest);
         response.EnsureSuccessStatusCode();
@@ -140,7 +140,7 @@ public class ApiToPlayVerifier : VerifierBase
         // Then - 기존 Stage 반환 확인
         Assert.IsTrue(result!.Success, "GetOrCreateStage should succeed");
         Assert.IsFalse(result.IsCreated, "Stage should already exist (IsCreated=false)");
-        Assert.Equals((ushort)stageId, result.StageId);
+        Assert.Equals(stageId, result.StageId);
     }
 
     /// <summary>
@@ -150,11 +150,11 @@ public class ApiToPlayVerifier : VerifierBase
     private async Task Test_CreateStage_Callback()
     {
         // Given
-        var stageId = GenerateUniqueStageId(13000);
+        var stageId = GenerateUniqueStageId(13000).ToString();
         var request = new CreateStageRequest
         {
             StageType = "TestStage",
-            StageId = (ushort)stageId
+            StageId = stageId
         };
 
         // When - HTTP POST /api/stages/callback (callback 버전)
@@ -164,7 +164,7 @@ public class ApiToPlayVerifier : VerifierBase
 
         // Then - E2E 검증 (HTTP 응답만)
         Assert.IsTrue(result!.Success, "CreateStage callback should succeed");
-        Assert.Equals((ushort)stageId, result.StageId);
+        Assert.Equals(stageId, result.StageId);
 
         // OnCreate에 packet이 전달되었는지 검증 (reply에서 echo된 값 확인)
         Assert.IsTrue(result.ReplyPayloadId != null, "OnCreate callback should return reply with payload info");
@@ -178,11 +178,11 @@ public class ApiToPlayVerifier : VerifierBase
     private async Task Test_GetOrCreateStage_Callback()
     {
         // Given
-        var stageId = GenerateUniqueStageId(14000);
+        var stageId = GenerateUniqueStageId(14000).ToString();
         var request = new GetOrCreateStageRequest
         {
             StageType = "TestStage",
-            StageId = (ushort)stageId
+            StageId = stageId
         };
 
         // When - HTTP POST /api/stages/get-or-create/callback (callback 버전)
@@ -193,7 +193,7 @@ public class ApiToPlayVerifier : VerifierBase
         // Then - 새로운 Stage 생성 확인
         Assert.IsTrue(result!.Success, "GetOrCreateStage callback should succeed");
         Assert.IsTrue(result.IsCreated, "Stage should be newly created");
-        Assert.Equals((ushort)stageId, result.StageId);
+        Assert.Equals(stageId, result.StageId);
 
         // OnCreate에 packet이 전달되었는지 검증 (reply에서 echo된 값 확인)
         Assert.IsTrue(result.ReplyPayloadId != null, "OnCreate callback should return reply with payload info");

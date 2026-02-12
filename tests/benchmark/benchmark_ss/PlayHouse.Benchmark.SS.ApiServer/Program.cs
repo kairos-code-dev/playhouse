@@ -278,7 +278,7 @@ internal record CreateStageHttpRequest
 {
     public required string PlayNid { get; set; }
     public required string StageType { get; set; }
-    public required long StageId { get; set; }
+    public required string StageId { get; set; }
 }
 
 /// <summary>
@@ -288,7 +288,7 @@ internal record CreateStageHttpResponse
 {
     public bool Success { get; set; }
     public int ErrorCode { get; set; }
-    public long StageId { get; set; }
+    public string StageId { get; set; } = "";
     public string PlayNid { get; set; } = "";
     public string? ErrorMessage { get; set; }
 }

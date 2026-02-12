@@ -21,13 +21,13 @@ internal abstract class PlayMessage : IDisposable
     /// <summary>
     /// Gets the target stage ID.
     /// </summary>
-    public long StageId { get; }
+    public string StageId { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlayMessage"/> class.
     /// </summary>
     /// <param name="stageId">Target stage ID.</param>
-    protected PlayMessage(long stageId)
+    protected PlayMessage(string stageId)
     {
         StageId = stageId;
     }
@@ -117,7 +117,7 @@ internal sealed class DestroyMessage : PlayMessage
     /// Initializes a new instance of the <see cref="DestroyMessage"/> class.
     /// </summary>
     /// <param name="stageId">The stage ID to destroy.</param>
-    public DestroyMessage(long stageId)
+    public DestroyMessage(string stageId)
         : base(stageId)
     {
     }
@@ -163,7 +163,7 @@ internal sealed class ClientRouteMessage : PlayMessage
     /// <param name="sid">Session ID.</param>
     /// <param name="payload">Message payload.</param>
     public ClientRouteMessage(
-        long stageId,
+        string stageId,
         string accountId,
         string msgId,
         ushort msgSeq,
@@ -233,7 +233,7 @@ internal sealed class JoinActorMessage : PlayMessage
     /// <param name="payload">Auth request payload.</param>
     /// <param name="authReplyPacket">Authentication reply packet from OnAuthenticate.</param>
     public JoinActorMessage(
-        long stageId,
+        string stageId,
         Base.BaseActor actor,
         ITransportSession session,
         ushort msgSeq,
@@ -275,7 +275,7 @@ internal sealed class DisconnectMessage : PlayMessage
     /// </summary>
     /// <param name="stageId">Target stage ID.</param>
     /// <param name="accountId">Account ID of disconnected client.</param>
-    public DisconnectMessage(long stageId, string accountId)
+    public DisconnectMessage(string stageId, string accountId)
         : base(stageId)
     {
         AccountId = accountId;

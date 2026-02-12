@@ -48,9 +48,8 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
 
     private bool _isRunning;
     private bool _disposed;
-    private readonly ConcurrentDictionary<string, int> _singleStageIds = new();
-    private readonly ConcurrentDictionary<long, SemaphoreSlim> _stageInitializationLocks = new();
-    private int _singleStageIdCounter = 1_500_000_000;
+    private readonly ConcurrentDictionary<string, string> _singleStageIds = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _stageInitializationLocks = new();
 
     /// <summary>
     /// 실제 바인딩된 TCP 포트.
@@ -275,7 +274,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         ITransportSession session,
         string msgId,
         ushort msgSeq,
-        long stageId,
+        string stageId,
         IPayload payload)
     {
         _ = stageId;
@@ -349,7 +348,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         {
             if (_dispatcher == null || _systemLink == null)
             {
-                await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InternalError);
+                await SendAuthReplyAsync(session, msgSeq, string.Empty, (ushort)ErrorCode.InternalError);
                 payload.Dispose();
                 return;
             }
@@ -357,7 +356,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
             if (string.IsNullOrEmpty(_options.DefaultStageType))
             {
                 _logger.LogError("DefaultStageType is required when authenticating direct client sessions.");
-                await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InvalidStageType);
+                await SendAuthReplyAsync(session, msgSeq, string.Empty, (ushort)ErrorCode.InvalidStageType);
                 payload.Dispose();
                 return;
             }
@@ -384,7 +383,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                     catch (KeyNotFoundException)
                     {
                         _logger.LogError("Actor factory not found for stage type: {StageType}", actorFactoryStageType);
-                        return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
+                        return (false, (ushort)ErrorCode.InvalidStageType, string.Empty, (BaseActor?)null, (IPacket?)null);
                     }
 
                     // Actor 콜백 순차 호출
@@ -400,7 +399,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         await actor.Actor.OnDestroy();
                         actor.Dispose();  // Dispose Actor's DI scope
                         authReply?.Dispose();
-                        return (false, (ushort)ErrorCode.AuthenticationFailed, 0L, (BaseActor?)null, (IPacket?)null);
+                        return (false, (ushort)ErrorCode.AuthenticationFailed, string.Empty, (BaseActor?)null, (IPacket?)null);
                     }
 
                     // AccountId 검증
@@ -410,15 +409,17 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         await actor.Actor.OnDestroy();
                         actor.Dispose();  // Dispose Actor's DI scope
                         authReply?.Dispose();
-                        return (false, (ushort)ErrorCode.InvalidAccountId, 0L, (BaseActor?)null, (IPacket?)null);
+                        return (false, (ushort)ErrorCode.InvalidAccountId, string.Empty, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    long resolvedStageId;
+                    string resolvedStageId;
                     string stageType;
-                    if (actorLink.StageId > 0)
+                    bool shouldCreateStage;
+                    if (!string.IsNullOrWhiteSpace(actorLink.StageId))
                     {
                         resolvedStageId = actorLink.StageId;
                         stageType = actorFactoryStageType;
+                        shouldCreateStage = false;
                     }
                     else if (!string.IsNullOrWhiteSpace(actorLink.AuthStageType))
                     {
@@ -429,7 +430,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                             await actor.Actor.OnDestroy();
                             actor.Dispose();
                             authReply?.Dispose();
-                            return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
+                            return (false, (ushort)ErrorCode.InvalidStageType, string.Empty, (BaseActor?)null, (IPacket?)null);
                         }
 
                         if (!_producer.IsSingleStageType(stageType))
@@ -438,11 +439,12 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                             await actor.Actor.OnDestroy();
                             actor.Dispose();
                             authReply?.Dispose();
-                            return (false, (ushort)ErrorCode.InvalidStageType, 0L, (BaseActor?)null, (IPacket?)null);
+                            return (false, (ushort)ErrorCode.InvalidStageType, string.Empty, (BaseActor?)null, (IPacket?)null);
                         }
 
                         resolvedStageId = ResolveSingleStageId(actorLink.AccountId, stageType);
                         actorLink.StageId = resolvedStageId;
+                        shouldCreateStage = true;
                     }
                     else
                     {
@@ -450,27 +452,47 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                         await actor.Actor.OnDestroy();
                         actor.Dispose();
                         authReply?.Dispose();
-                        return (false, (ushort)ErrorCode.StageNotFound, 0L, (BaseActor?)null, (IPacket?)null);
+                        return (false, (ushort)ErrorCode.StageNotFound, string.Empty, (BaseActor?)null, (IPacket?)null);
                     }
 
-                    var stageReady = await CreateStageIfNotExistsAsync(resolvedStageId, stageType);
-                    if (!stageReady)
+                    if (shouldCreateStage)
                     {
-                        _logger.LogError("Failed to initialize stage {StageId}", resolvedStageId);
-                        await actor.Actor.OnDestroy();
-                        actor.Dispose();
-                        authReply?.Dispose();
-                        return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
+                        var stageReady = await CreateStageIfNotExistsAsync(resolvedStageId, stageType);
+                        if (!stageReady)
+                        {
+                            _logger.LogError("Failed to initialize single stage {StageId}", resolvedStageId);
+                            await actor.Actor.OnDestroy();
+                            actor.Dispose();
+                            authReply?.Dispose();
+                            return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
+                        }
                     }
 
                     var baseStage = _dispatcher.GetStage(resolvedStageId);
-                    if (baseStage == null)
+                    if (baseStage == null || !baseStage.IsCreated)
                     {
-                        _logger.LogError("Stage {StageId} was not found after successful initialization", resolvedStageId);
+                        _logger.LogWarning(
+                            "Stage {StageId} was not found or not created. RequireExistingStage={RequireExistingStage}",
+                            resolvedStageId,
+                            !shouldCreateStage);
                         await actor.Actor.OnDestroy();
                         actor.Dispose();
                         authReply?.Dispose();
-                        return (false, (ushort)ErrorCode.StageCreationFailed, resolvedStageId, (BaseActor?)null, (IPacket?)null);
+                        var errorCode = shouldCreateStage ? ErrorCode.StageCreationFailed : ErrorCode.StageNotFound;
+                        return (false, (ushort)errorCode, resolvedStageId, (BaseActor?)null, (IPacket?)null);
+                    }
+
+                    if (!string.Equals(baseStage.StageType, stageType, StringComparison.Ordinal))
+                    {
+                        _logger.LogWarning(
+                            "Stage type mismatch. StageId={StageId}, Expected={ExpectedStageType}, Actual={ActualStageType}",
+                            resolvedStageId,
+                            stageType,
+                            baseStage.StageType);
+                        await actor.Actor.OnDestroy();
+                        actor.Dispose();
+                        authReply?.Dispose();
+                        return (false, (ushort)ErrorCode.InvalidStageType, resolvedStageId, (BaseActor?)null, (IPacket?)null);
                     }
 
                     actorLink.BindStage(baseStage);
@@ -486,7 +508,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error during actor authentication callbacks");
-                    return (false, (ushort)ErrorCode.InternalError, 0L, (BaseActor?)null, (IPacket?)null);
+                    return (false, (ushort)ErrorCode.InternalError, string.Empty, (BaseActor?)null, (IPacket?)null);
                 }
             });
 
@@ -506,7 +528,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         catch (Exception ex)
         {
             _logger.LogError(ex, "Authentication failed for session {SessionId}", session.SessionId);
-            await SendAuthReplyAsync(session, msgSeq, 0, (ushort)ErrorCode.InternalError);
+            await SendAuthReplyAsync(session, msgSeq, string.Empty, (ushort)ErrorCode.InternalError);
             payload.Dispose();
         }
     }
@@ -514,14 +536,14 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     private Task SendAuthReplyAsync(
         ITransportSession session,
         ushort msgSeq,
-        long stageId,
+        string stageId,
         ushort errorCode,
         string? accountId = null)
     {
         var reply = new Proto.AuthenticateReply
         {
             Authenticated = errorCode == (ushort)ErrorCode.Success,
-            StageId = (int)stageId,
+            StageId = stageId,
             AccountId = long.TryParse(accountId, out var id) ? id : 0,
             ErrorMessage = errorCode == (ushort)ErrorCode.Success ? "" : $"Error code: {errorCode}"
         };
@@ -549,26 +571,18 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         return Task.CompletedTask;
     }
 
-    private int ResolveSingleStageId(string accountId, string stageType)
+    private string ResolveSingleStageId(string accountId, string stageType)
     {
-        var key = $"{stageType}:{accountId}";
-        return _singleStageIds.GetOrAdd(key, _ =>
-        {
-            var next = Interlocked.Increment(ref _singleStageIdCounter);
-            if (next <= 0)
-            {
-                throw new InvalidOperationException("Single-stage id counter overflowed.");
-            }
-
-            return next;
-        });
+        var key = BuildSingleStageRoomKey(stageType, accountId);
+        return _singleStageIds.GetOrAdd(key, _ => key);
     }
 
-    private long GenerateStageId()
+    private static string BuildSingleStageRoomKey(string stageType, string accountId)
     {
-        // Simple stage ID generation (timestamp-based)
-        return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        return $"single:{stageType}:{accountId}";
     }
+
+    private static string BuildNamedStageRoomKey(string stageType, string stageId) => $"stage:{stageType}:{stageId}";
 
 
     /// <summary>
@@ -616,7 +630,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
         session.ProcessorContext = null;
 
         // 인증된 세션인 경우 DisconnectMessage 전달
-        if (session.IsAuthenticated && !string.IsNullOrEmpty(session.AccountId) && session.StageId != 0)
+        if (session.IsAuthenticated && !string.IsNullOrEmpty(session.AccountId) && !string.IsNullOrEmpty(session.StageId))
         {
             _dispatcher?.OnPost(new DisconnectMessage(session.StageId, session.AccountId));
         }
@@ -640,7 +654,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     /// <summary>
     /// 특정 세션에 Push 메시지를 전송합니다.
     /// </summary>
-    public ValueTask SendPushAsync(long sessionId, string msgId, long stageId, ReadOnlyMemory<byte> payload)
+    public ValueTask SendPushAsync(long sessionId, string msgId, string stageId, ReadOnlyMemory<byte> payload)
     {
         var session = _transportServer?.GetSession(sessionId);
         if (session?.IsConnected == true)
@@ -679,7 +693,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     /// <param name="stageId">생성할 Stage의 ID</param>
     /// <param name="stageType">생성할 Stage의 타입</param>
     /// <returns>Stage가 생성되었거나 이미 존재하면 true, 실패하면 false</returns>
-    public bool CreateStageIfNotExists(long stageId, string stageType)
+    public bool CreateStageIfNotExists(string stageId, string stageType)
     {
         return CreateStageIfNotExistsAsync(stageId, stageType)
             .ConfigureAwait(false)
@@ -697,7 +711,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     /// <param name="cancellationToken">취소 토큰</param>
     /// <returns>Stage가 생성되었거나 이미 존재하면 true, 실패하면 false</returns>
     public async Task<bool> CreateStageIfNotExistsAsync(
-        long stageId,
+        string stageId,
         string stageType,
         CancellationToken cancellationToken = default)
     {
@@ -781,7 +795,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     /// <param name="stageId">대상 Stage ID</param>
     /// <param name="msgId">메시지 ID</param>
     /// <param name="payload">페이로드 (null이면 빈 페이로드)</param>
-    public void SendToStage(long stageId, string msgId, byte[]? payload = null)
+    public void SendToStage(string stageId, string msgId, byte[]? payload = null)
     {
         if (_dispatcher == null) return;
 
@@ -843,7 +857,7 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     }
 
     /// <inheritdoc/>
-    public ValueTask SendClientReplyAsync(long sessionId, string msgId, ushort msgSeq, long stageId, ushort errorCode, Abstractions.IPayload payload)
+    public ValueTask SendClientReplyAsync(long sessionId, string msgId, ushort msgSeq, string stageId, ushort errorCode, Abstractions.IPayload payload)
     {
         var session = _transportServer?.GetSession(sessionId);
         if (session?.IsConnected == true)

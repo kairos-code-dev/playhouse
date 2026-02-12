@@ -18,7 +18,7 @@ message AuthenticateRequest {
 // TCP/WebSocket: Authentication response
 message AuthenticateReply {
     int64 account_id = 1;          // Server-assigned account ID
-    int32 stage_id = 2;            // Stage ID
+    string stage_id = 2;            // Stage ID
     bool authenticated = 3;        // Authentication success
     string error_message = 4;      // Error message if failed
 }

@@ -85,9 +85,8 @@ public class StageToStageVerifier : VerifierBase
     private async Task Test_SendToStage_SameServer()
     {
         // Given - 같은 서버에 두 개의 Stage 연결
-        await ConnectAndAuthenticateAsync(_connectorA!);
-        await ConnectAndAuthenticateAsync(_connectorB!);
-        var stageIdB = _connectorB!.StageId;
+        _ = await ConnectAndAuthenticateAsync(_connectorA!, "stage_a");
+        var stageIdB = await ConnectAndAuthenticateAsync(_connectorB!, "stage_b");
 
         // When - Stage A에서 같은 서버의 Stage B로 SendToStage
         var request = new TriggerSendToStageRequest
@@ -118,9 +117,8 @@ public class StageToStageVerifier : VerifierBase
     private async Task Test_RequestToStage_SameServer_Async()
     {
         // Given - 같은 서버에 두 개의 Stage 연결
-        await ConnectAndAuthenticateAsync(_connectorA!);
-        await ConnectAndAuthenticateAsync(_connectorB!);
-        var stageIdB = _connectorB!.StageId;
+        _ = await ConnectAndAuthenticateAsync(_connectorA!, "stage_a");
+        var stageIdB = await ConnectAndAuthenticateAsync(_connectorB!, "stage_b");
 
         // When - Stage A에서 같은 서버의 Stage B로 RequestToStage
         var request = new TriggerRequestToStageRequest
@@ -149,9 +147,8 @@ public class StageToStageVerifier : VerifierBase
     private async Task Test_RequestToStage_SameServer_Callback()
     {
         // Given - 같은 서버에 두 개의 Stage 연결
-        await ConnectAndAuthenticateAsync(_connectorA!);
-        await ConnectAndAuthenticateAsync(_connectorB!);
-        var stageIdB = _connectorB!.StageId;
+        _ = await ConnectAndAuthenticateAsync(_connectorA!, "stage_a");
+        var stageIdB = await ConnectAndAuthenticateAsync(_connectorB!, "stage_b");
 
         _receivedMessagesA.Clear();
 
@@ -199,9 +196,8 @@ public class StageToStageVerifier : VerifierBase
     private async Task Test_SendToStage_MessageDelivered()
     {
         // Given
-        await ConnectAndAuthenticateAsync(_connectorA!);
-        await ConnectAndAuthenticateAsync(_connectorB!);
-        var stageIdB = _connectorB!.StageId;
+        _ = await ConnectAndAuthenticateAsync(_connectorA!, "stage_a");
+        var stageIdB = await ConnectAndAuthenticateAsync(_connectorB!, "stage_b");
 
         // When
         var request = new TriggerSendToStageRequest
@@ -232,9 +228,8 @@ public class StageToStageVerifier : VerifierBase
     private async Task Test_RequestToStage_ResponseReceived()
     {
         // Given
-        await ConnectAndAuthenticateAsync(_connectorA!);
-        await ConnectAndAuthenticateAsync(_connectorB!);
-        var stageIdB = _connectorB!.StageId;
+        _ = await ConnectAndAuthenticateAsync(_connectorA!, "stage_a");
+        var stageIdB = await ConnectAndAuthenticateAsync(_connectorB!, "stage_b");
 
         // When
         var request = new TriggerRequestToStageRequest
@@ -259,17 +254,24 @@ public class StageToStageVerifier : VerifierBase
 
     #region Helper Methods
 
-    private async Task ConnectAndAuthenticateAsync(PlayHouse.Connector.Connector connector)
+    private async Task<string> ConnectAndAuthenticateAsync(PlayHouse.Connector.Connector connector, string userPrefix)
     {
         connector.Init(new ConnectorConfig { RequestTimeoutMs = 30000 });
         var connected = await connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
         Assert.IsTrue(connected, "Should connect to server");
         await Task.Delay(100);
 
-        using var authPacket = Packet.Empty("AuthenticateRequest");
+        var userId = GenerateUniqueUserId(userPrefix);
+        var authRequest = new AuthenticateRequest
+        {
+            UserId = userId,
+            Token = "single-stage"
+        };
+        using var authPacket = new Packet(authRequest);
         await connector.AuthenticateAsync(authPacket);
-        Assert.IsTrue(connector.StageId > 0, "Authenticated connector should have a valid stage id");
+        Assert.IsTrue(connector.IsAuthenticated(), "Authenticated connector should be authenticated");
         await Task.Delay(100);
+        return $"single:SingleStage:{userId}";
     }
 
     #endregion

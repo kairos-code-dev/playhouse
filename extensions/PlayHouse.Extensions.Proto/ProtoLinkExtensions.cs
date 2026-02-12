@@ -76,7 +76,7 @@ public static class ProtoLinkExtensions
     /// <param name="playServerId">Target Play server ID.</param>
     /// <param name="stageId">Target stage ID.</param>
     /// <param name="message">The Protobuf message to send.</param>
-    public static void SendToStage<T>(this ILink link, string playServerId, long stageId, T message) where T : IMessage
+    public static void SendToStage<T>(this ILink link, string playServerId, string stageId, T message) where T : IMessage
     {
         link.SendToStage(playServerId, stageId, ProtoCPacketExtensions.OfProto(message));
     }
@@ -90,7 +90,7 @@ public static class ProtoLinkExtensions
     /// <param name="stageId">Target stage ID.</param>
     /// <param name="message">The Protobuf request message.</param>
     /// <returns>The reply packet.</returns>
-    public static Task<IPacket> RequestToStage<T>(this ILink link, string playServerId, long stageId, T message) where T : IMessage
+    public static Task<IPacket> RequestToStage<T>(this ILink link, string playServerId, string stageId, T message) where T : IMessage
     {
         return link.RequestToStage(playServerId, stageId, ProtoCPacketExtensions.OfProto(message));
     }
@@ -198,7 +198,7 @@ public static class ProtoLinkExtensions
         this IApiLink link,
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         T payload) where T : IMessage
     {
         return link.CreateStage(playNid, stageType, stageId, ProtoCPacketExtensions.OfProto(payload));
@@ -218,7 +218,7 @@ public static class ProtoLinkExtensions
         this IApiLink link,
         string playNid,
         string stageType,
-        long stageId,
+        string stageId,
         T createPayload) where T : IMessage
     {
         return link.GetOrCreateStage(playNid, stageType, stageId, ProtoCPacketExtensions.OfProto(createPayload));

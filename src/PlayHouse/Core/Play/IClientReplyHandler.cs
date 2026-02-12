@@ -20,5 +20,5 @@ internal interface IClientReplyHandler
     /// <param name="stageId">Stage ID.</param>
     /// <param name="errorCode">Error code (0 for success).</param>
     /// <param name="payload">Response payload.</param>
-    ValueTask SendClientReplyAsync(long sessionId, string msgId, ushort msgSeq, long stageId, ushort errorCode, Abstractions.IPayload payload);
+    ValueTask SendClientReplyAsync(long sessionId, string msgId, ushort msgSeq, string stageId, ushort errorCode, Abstractions.IPayload payload);
 }

@@ -48,12 +48,12 @@ internal static class MessageCodec
         ReadOnlySpan<byte> data,
         out string msgId,
         out ushort msgSeq,
-        out long stageId,
+        out string stageId,
         out int payloadOffset)
     {
         msgId = string.Empty;
         msgSeq = 0;
-        stageId = 0;
+        stageId = string.Empty;
         payloadOffset = 0;
 
         if (data.Length < MinMessageSize)
@@ -107,7 +107,7 @@ internal static class MessageCodec
         Span<byte> buffer,
         string msgId,
         ushort msgSeq,
-        long stageId,
+        string stageId,
         ushort errorCode,
         ReadOnlySpan<byte> payload)
     {

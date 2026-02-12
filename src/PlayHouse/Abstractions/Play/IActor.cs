@@ -72,7 +72,7 @@ public interface IActor
     ///     var authReq = AuthRequest.Parser.ParseFrom(authPacket.Payload.DataSpan);
     ///     if (ValidateToken(authReq.Token))
     ///     {
-    ///         ActorLink.SetAuthContext(authReq.UserId, 1001); // REQUIRED!
+    ///         ActorLink.SetAuthContext(authReq.UserId, "1001"); // REQUIRED!
     ///         var reply = new AuthReply { Success = true };
     ///         return (true, CPacket.Of(reply));
     ///     }

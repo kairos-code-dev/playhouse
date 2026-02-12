@@ -43,7 +43,7 @@ public interface IStageLink : ILink
     /// <summary>
     /// Gets the unique identifier for this Stage.
     /// </summary>
-    long StageId { get; }
+    string StageId { get; }
 
     /// <summary>
     /// Gets the type identifier for this Stage.

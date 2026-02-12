@@ -17,7 +17,7 @@ public static class TestHttpApiControllerSample
     /// <summary>
     /// Example: Create a stage via HTTP API
     /// </summary>
-    public static async Task<CreateStageResponse> CreateStageExample(HttpClient httpClient, string stageType, ushort stageId)
+    public static async Task<CreateStageResponse> CreateStageExample(HttpClient httpClient, string stageType, string stageId)
     {
         var request = new CreateStageRequest
         {
@@ -35,7 +35,7 @@ public static class TestHttpApiControllerSample
     /// <summary>
     /// Example: Get or create a stage via HTTP API
     /// </summary>
-    public static async Task<GetOrCreateStageResponse> GetOrCreateStageExample(HttpClient httpClient, string stageType, ushort stageId)
+    public static async Task<GetOrCreateStageResponse> GetOrCreateStageExample(HttpClient httpClient, string stageType, string stageId)
     {
         var request = new GetOrCreateStageRequest
         {
@@ -68,7 +68,7 @@ public static class TestHttpApiControllerSample
         // using var httpClient = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{httpPort}") };
 
         // 4. Call HTTP API
-        // var result = await CreateStageExample(httpClient, "TestStage", 1);
+        // var result = await CreateStageExample(httpClient, "TestStage", "1");
 
         // 5. Verify result
         // Assert.True(result.Success);

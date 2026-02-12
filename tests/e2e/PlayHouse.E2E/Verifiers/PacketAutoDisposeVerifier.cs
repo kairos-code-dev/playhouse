@@ -38,7 +38,6 @@ public class PacketAutoDisposeVerifier : VerifierBase
         // 연결 + 인증
         if (!Connector.IsConnected())
         {
-            var stageId = GenerateUniqueStageId();
             var connected = await Connector.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
             Assert.IsTrue(connected, "Should connect to server");
             await Task.Delay(100);
@@ -303,9 +302,15 @@ public class PacketAutoDisposeVerifier : VerifierBase
         var connector2 = new PlayHouse.Connector.Connector();
         connector2.Init(new PlayHouse.Connector.ConnectorConfig { RequestTimeoutMs = 30000 });
         await connector2.ConnectAsync("127.0.0.1", ServerContext.TcpPort);
-        using var authPacket2 = Packet.Empty("AuthenticateRequest");
+        var connector2UserId = GenerateUniqueUserId("packet_autodispose_stage2");
+        var authRequest2 = new AuthenticateRequest
+        {
+            UserId = connector2UserId,
+            Token = "single-stage"
+        };
+        using var authPacket2 = new Packet(authRequest2);
         await connector2.AuthenticateAsync(authPacket2);
-        var stageId2 = connector2.StageId;
+        var stageId2 = $"single:SingleStage:{connector2UserId}";
 
         try
         {

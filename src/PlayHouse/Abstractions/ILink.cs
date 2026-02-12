@@ -66,7 +66,7 @@ public interface ILink
     /// <param name="playServerId">Target Play server ID.</param>
     /// <param name="stageId">Target stage ID.</param>
     /// <param name="packet">Packet to send.</param>
-    void SendToStage(string playServerId, long stageId, IPacket packet);
+    void SendToStage(string playServerId, string stageId, IPacket packet);
 
     /// <summary>
     /// Sends a request to a stage with a callback for the reply.
@@ -75,7 +75,7 @@ public interface ILink
     /// <param name="stageId">Target stage ID.</param>
     /// <param name="packet">Request packet.</param>
     /// <param name="replyCallback">Callback to handle the reply.</param>
-    void RequestToStage(string playServerId, long stageId, IPacket packet, ReplyCallback replyCallback);
+    void RequestToStage(string playServerId, string stageId, IPacket packet, ReplyCallback replyCallback);
 
     /// <summary>
     /// Sends a request to a stage and awaits the reply.
@@ -84,7 +84,7 @@ public interface ILink
     /// <param name="stageId">Target stage ID.</param>
     /// <param name="packet">Request packet.</param>
     /// <returns>The reply packet.</returns>
-    Task<IPacket> RequestToStage(string playServerId, long stageId, IPacket packet);
+    Task<IPacket> RequestToStage(string playServerId, string stageId, IPacket packet);
 
     #endregion
 

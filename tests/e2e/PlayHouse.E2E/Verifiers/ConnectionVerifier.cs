@@ -19,7 +19,7 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
 
     public override string CategoryName => "Connection";
 
-    public override int GetTestCount() => 10;
+    public override int GetTestCount() => 12;
 
     protected override Task SetupAsync()
     {
@@ -67,6 +67,8 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
         await RunTest("Authenticate_Success_Callback", Test_Authenticate_Success_Callback);
         await RunTest("Authenticate_SingleStage_AutoCreate", Test_Authenticate_SingleStage_AutoCreate);
         await RunTest("Authenticate_SingleStage_SameUserSameStage", Test_Authenticate_SingleStage_SameUserSameStage);
+        await RunTest("Authenticate_MultiStage_WithoutPreCreatedStage_Fails", Test_Authenticate_MultiStage_WithoutPreCreatedStage_Fails);
+        await RunTest("Authenticate_MultiStage_WithPreCreatedStage_Joins", Test_Authenticate_MultiStage_WithPreCreatedStage_Joins);
     }
 
     private async Task Test_Connect_Success()
@@ -300,6 +302,60 @@ public class ConnectionVerifier(ServerContext serverContext) : VerifierBase(serv
 
             await connector2.DisposeAsync();
         }
+    }
+
+    private async Task Test_Authenticate_MultiStage_WithoutPreCreatedStage_Fails()
+    {
+        await ConnectOnlyAsync();
+
+        var stageId = GenerateUniqueStageId(51000);
+        var authRequest = new AuthenticateRequest
+        {
+            UserId = GenerateUniqueUserId("multi_missing"),
+            Token = $"multi-stage:{stageId}"
+        };
+
+        using var authPacket = new Packet(authRequest);
+        ConnectorException? caughtException = null;
+        try
+        {
+            _ = await Connector.AuthenticateAsync(authPacket);
+        }
+        catch (ConnectorException ex)
+        {
+            caughtException = ex;
+        }
+
+        Assert.NotNull(caughtException, "auth should fail when target multi-stage does not exist");
+        Assert.Equals(3, caughtException!.ErrorCode, "missing multi-stage should return StageNotFound");
+        Assert.IsFalse(Connector.IsAuthenticated(), "connector should remain unauthenticated on auth failure");
+
+        Connector.Disconnect();
+        await Task.Delay(100);
+    }
+
+    private async Task Test_Authenticate_MultiStage_WithPreCreatedStage_Joins()
+    {
+        await ConnectOnlyAsync();
+
+        var stageId = GenerateUniqueStageId(52000);
+        var stageReady = ServerContext.PlayServer.CreateStageIfNotExists(stageId.ToString(), "TestStage");
+        Assert.IsTrue(stageReady, "target multi-stage should be pre-created for join");
+
+        var authRequest = new AuthenticateRequest
+        {
+            UserId = GenerateUniqueUserId("multi_existing"),
+            Token = $"multi-stage:{stageId}"
+        };
+
+        using var authPacket = new Packet(authRequest);
+        _ = await Connector.AuthenticateAsync(authPacket);
+
+        Assert.IsTrue(Connector.IsAuthenticated(), "auth should succeed when target multi-stage exists");
+        Assert.IsTrue(Connector.StageId > 0, "connector should hold a valid stage id after joining a pre-created multi-stage");
+
+        Connector.Disconnect();
+        await Task.Delay(100);
     }
 
     #region Helper Methods

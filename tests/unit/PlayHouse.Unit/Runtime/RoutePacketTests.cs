@@ -25,7 +25,7 @@ public class RoutePacketTests
             ServiceId = 1,
             MsgId = "TestMessage",
             From = "1:1",
-            StageId = 42,
+            StageId = "42",
             AccountId = 12345
         };
         var headerBytes = header.ToByteArray();
@@ -38,7 +38,7 @@ public class RoutePacketTests
         packet.MsgSeq.Should().Be(100);
         packet.MsgId.Should().Be("TestMessage");
         packet.From.Should().Be("1:1");
-        packet.StageId.Should().Be(42);
+        packet.StageId.Should().Be("42");
         packet.AccountId.Should().Be(12345);
         packet.Payload.DataSpan.ToArray().Should().BeEquivalentTo(payloadBytes);
     }

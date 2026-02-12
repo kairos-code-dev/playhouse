@@ -87,7 +87,7 @@ public class PlayDispatcherTests : IDisposable
         public Task OnDestroy() => Task.CompletedTask;
         public Task<(bool result, IPacket? reply)> OnAuthenticate(IPacket authPacket)
         {
-            ActorLink.SetAuthContext("1", 1L);
+            ActorLink.SetAuthContext("1", "1");
             return Task.FromResult<(bool, IPacket?)>((true, null));
         }
         public Task OnPostAuthenticate() => Task.CompletedTask;
@@ -298,7 +298,7 @@ public class PlayDispatcherTests : IDisposable
     public async Task Post_CreateStageReq_CreatesNewStage()
     {
         // Given (전제조건)
-        const long stageId = 100;
+        const string stageId = "100";
         var packet = CreateCreateStagePacket(stageId, "test_stage");
 
         // When (행동)
@@ -313,7 +313,7 @@ public class PlayDispatcherTests : IDisposable
     public async Task Post_CreateStageReq_CallsOnPostCreate()
     {
         // Given
-        const long stageId = 120;
+        const string stageId = "120";
         var packet = CreateCreateStagePacket(stageId, "test_stage");
 
         // When
@@ -334,7 +334,7 @@ public class PlayDispatcherTests : IDisposable
     {
         // Given
         DisposableReplyStage.ResetCounters();
-        const long stageId = 121;
+        const string stageId = "121";
         var packet = CreateCreateStagePacket(stageId, "dispose_stage");
 
         // When
@@ -350,7 +350,7 @@ public class PlayDispatcherTests : IDisposable
     public async Task Post_CreateStageReq_DuplicateStageId_SendsError()
     {
         // Given (전제조건)
-        const long stageId = 100;
+        const string stageId = "100";
         var packet1 = CreateCreateStagePacket(stageId, "test_stage");
         var packet2 = CreateCreateStagePacket(stageId, "test_stage");
 
@@ -369,7 +369,7 @@ public class PlayDispatcherTests : IDisposable
     public async Task Post_CreateStageReq_InvalidStageType_SendsError()
     {
         // Given (전제조건)
-        const long stageId = 100;
+        const string stageId = "100";
         var packet = CreateCreateStagePacket(stageId, "invalid_type");
 
         // When (행동)
@@ -384,7 +384,7 @@ public class PlayDispatcherTests : IDisposable
     public void Post_NonExistentStage_SendsError()
     {
         // Given (전제조건)
-        const long stageId = 999;
+        const string stageId = "999";
         var packet = CreateTestPacket(stageId, "TestMsg", msgSeq: 1);
 
         // When (행동)
@@ -399,7 +399,7 @@ public class PlayDispatcherTests : IDisposable
     public async Task PostDestroy_RemovesStage()
     {
         // Given (전제조건)
-        const long stageId = 100;
+        const string stageId = "100";
         var createPacket = CreateCreateStagePacket(stageId, "test_stage");
         _dispatcher.OnPost(new RouteMessage(createPacket));
         await Task.Delay(100);
@@ -419,7 +419,7 @@ public class PlayDispatcherTests : IDisposable
     {
         // Given (전제조건)
         var timerPacket = new TimerPacket(
-            stageId: 100,
+            stageId: "100",
             timerId: 1,
             type: TimerMsg.Types.Type.Repeat,
             initialDelayMs: 1000,
@@ -450,8 +450,8 @@ public class PlayDispatcherTests : IDisposable
             null,
             NullLoggerFactory.Instance);
 
-        var packet1 = CreateCreateStagePacket(100, "test_stage");
-        var packet2 = CreateCreateStagePacket(101, "test_stage");
+        var packet1 = CreateCreateStagePacket("100", "test_stage");
+        var packet2 = CreateCreateStagePacket("101", "test_stage");
 
         dispatcher.OnPost(new RouteMessage(packet1));
         dispatcher.OnPost(new RouteMessage(packet2));
@@ -471,7 +471,7 @@ public class PlayDispatcherTests : IDisposable
     public async Task Post_GetOrCreateStageReq_CallsOnPostCreateOnlyOnce()
     {
         // Given
-        const long stageId = 130;
+        const string stageId = "130";
         var packet1 = CreateGetOrCreateStagePacket(stageId, "test_stage");
         var packet2 = CreateGetOrCreateStagePacket(stageId, "test_stage");
 
@@ -494,7 +494,7 @@ public class PlayDispatcherTests : IDisposable
     {
         // Given
         DisposableReplyStage.ResetCounters();
-        const long stageId = 131;
+        const string stageId = "131";
         var packet1 = CreateGetOrCreateStagePacket(stageId, "dispose_stage");
         var packet2 = CreateGetOrCreateStagePacket(stageId, "dispose_stage");
 
@@ -514,7 +514,7 @@ public class PlayDispatcherTests : IDisposable
     {
         // Given
         FailFirstPostCreateStage.ResetCounters();
-        const long stageId = 132;
+        const string stageId = "132";
         var packet1 = CreateGetOrCreateStagePacket(stageId, "fail_first_postcreate_stage");
         var packet2 = CreateGetOrCreateStagePacket(stageId, "fail_first_postcreate_stage");
 
@@ -542,7 +542,7 @@ public class PlayDispatcherTests : IDisposable
     {
         // Given
         FailFirstPostCreateStage.ResetCounters();
-        const long stageId = 133;
+        const string stageId = "133";
         var packet1 = CreateCreateStagePacket(stageId, "fail_first_postcreate_stage");
         var packet2 = CreateCreateStagePacket(stageId, "fail_first_postcreate_stage");
 
@@ -573,7 +573,7 @@ public class PlayDispatcherTests : IDisposable
         // When (행동)
         for (int i = 0; i < stageCount; i++)
         {
-            var packet = CreateCreateStagePacket(100 + i, "test_stage");
+            var packet = CreateCreateStagePacket((100 + i).ToString(), "test_stage");
             _dispatcher.OnPost(new RouteMessage(packet));
         }
         await Task.Delay(200);
@@ -584,7 +584,7 @@ public class PlayDispatcherTests : IDisposable
 
     #region Helper Methods
 
-    private static RoutePacket CreateCreateStagePacket(long stageId, string stageType)
+    private static RoutePacket CreateCreateStagePacket(string stageId, string stageType)
     {
         var createReq = new CreateStageReq { StageType = stageType };
         var header = new RouteHeader
@@ -598,7 +598,7 @@ public class PlayDispatcherTests : IDisposable
         return RoutePacket.Of(header, createReq.ToByteArray());
     }
 
-    private static RoutePacket CreateTestPacket(long stageId, string msgId, ushort msgSeq = 0)
+    private static RoutePacket CreateTestPacket(string stageId, string msgId, ushort msgSeq = 0)
     {
         var header = new RouteHeader
         {
@@ -612,7 +612,7 @@ public class PlayDispatcherTests : IDisposable
         return RoutePacket.Of(header, Array.Empty<byte>());
     }
 
-    private static RoutePacket CreateGetOrCreateStagePacket(long stageId, string stageType)
+    private static RoutePacket CreateGetOrCreateStagePacket(string stageId, string stageType)
     {
         var req = new GetOrCreateStageReq
         {

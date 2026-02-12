@@ -33,7 +33,7 @@ internal sealed class XActorLink : IActorLink
     public string AccountId { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public long StageId { get; set; }
+    public string StageId { get; set; } = string.Empty;
 
     internal string AuthStageType { get; private set; } = string.Empty;
 
@@ -118,10 +118,11 @@ internal sealed class XActorLink : IActorLink
         {
             if (_transportSession.IsConnected)
             {
+                var transportStageId = ResolveTransportStageId();
                 _transportSession.SendResponse(
                     packet.MsgId,
                     0,  // msgSeq = 0 for push messages
-                    StageId,
+                    transportStageId,
                     0,  // errorCode = 0
                     packet.Payload.DataSpan);
                 return;
@@ -138,12 +139,12 @@ internal sealed class XActorLink : IActorLink
     }
 
     /// <inheritdoc/>
-    public void SetAuthContext(string accountId, long stageId)
+    public void SetAuthContext(string accountId, string stageId)
     {
         if (string.IsNullOrWhiteSpace(accountId))
             throw new ArgumentException("AccountId must not be empty.", nameof(accountId));
-        if (stageId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(stageId), "StageId must be greater than 0.");
+        if (string.IsNullOrWhiteSpace(stageId))
+            throw new ArgumentException("StageId must not be empty.", nameof(stageId));
 
         AccountId = accountId;
         StageId = stageId;
@@ -159,8 +160,17 @@ internal sealed class XActorLink : IActorLink
             throw new ArgumentException("StageType must not be empty.", nameof(stageType));
 
         AccountId = accountId;
-        StageId = 0;
+        StageId = string.Empty;
         AuthStageType = stageType;
+    }
+
+    private string ResolveTransportStageId()
+    {
+        if (_baseStage != null)
+        {
+            return _baseStage.StageId;
+        }
+        return StageId;
     }
 
     #endregion
@@ -222,19 +232,19 @@ internal sealed class XActorLink : IActorLink
     }
 
     /// <inheritdoc/>
-    public void SendToStage(string playNid, long stageId, IPacket packet)
+    public void SendToStage(string playNid, string stageId, IPacket packet)
     {
         ActiveLink.SendToStage(playNid, stageId, packet);
     }
 
     /// <inheritdoc/>
-    public void RequestToStage(string playNid, long stageId, IPacket packet, ReplyCallback replyCallback)
+    public void RequestToStage(string playNid, string stageId, IPacket packet, ReplyCallback replyCallback)
     {
         ActiveLink.RequestToStage(playNid, stageId, packet, replyCallback);
     }
 
     /// <inheritdoc/>
-    public async Task<IPacket> RequestToStage(string playNid, long stageId, IPacket packet)
+    public async Task<IPacket> RequestToStage(string playNid, string stageId, IPacket packet)
     {
         return await ActiveLink.RequestToStage(playNid, stageId, packet);
     }
@@ -296,7 +306,7 @@ internal sealed class XActorLink : IActorLink
     internal void BindStage(BaseStage baseStage)
     {
         _baseStage = baseStage;
-        StageId = baseStage.StageId;
+        StageId = baseStage.StageId.ToString();
     }
 
     #endregion

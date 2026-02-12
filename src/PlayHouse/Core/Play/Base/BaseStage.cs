@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Concurrent;
+using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PlayHouse.Abstractions;
@@ -42,7 +43,7 @@ internal sealed class BaseStage(
     public IStage Stage { get; } = stage;
     public XStageLink StageLink { get; } = stageLink;
     public bool IsCreated { get; private set; }
-    public long StageId => StageLink.StageId;
+    public string StageId => StageLink.StageId;
     public string StageType => StageLink.StageType;
 
     public void RegisterReplyForDisposal(IDisposable packet) => _pendingReplyPackets.Add(packet);
@@ -418,7 +419,8 @@ internal sealed class BaseStage(
             return (false, (ushort)ErrorCode.InvalidAccountId, null, null);
         }
 
-        if (actorSender.StageId <= 0 || actorSender.StageId != StageId)
+        if (string.IsNullOrWhiteSpace(actorSender.StageId)
+            || !string.Equals(actorSender.StageId, StageId, StringComparison.Ordinal))
         {
             await actor.OnDestroy();
             actorScope?.Dispose();

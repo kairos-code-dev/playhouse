@@ -14,7 +14,7 @@ namespace PlayHouse.Unit.Core.Play;
 /// </summary>
 public class GameLoopTimerTests : IDisposable
 {
-    private readonly List<(long stageId, TimeSpan deltaTime, TimeSpan totalElapsed)> _ticks = new();
+    private readonly List<(string stageId, TimeSpan deltaTime, TimeSpan totalElapsed)> _ticks = new();
     private readonly ILogger _logger;
 
     public GameLoopTimerTests()
@@ -27,7 +27,7 @@ public class GameLoopTimerTests : IDisposable
     }
 
     private GameLoopTimer CreateTimer(
-        long stageId = 1,
+        string stageId = "1",
         double fixedTimestepMs = 50,
         TimeSpan? maxAccumulatorCap = null)
     {
@@ -219,7 +219,7 @@ public class GameLoopTimerTests : IDisposable
     public async Task CorrectStageId_InCallback()
     {
         // Given (전제조건)
-        const long expectedStageId = 42;
+        const string expectedStageId = "42";
         using var timer = CreateTimer(stageId: expectedStageId);
 
         // When (행동)

@@ -34,8 +34,8 @@ namespace PlayHouse.Core.Play;
 /// </remarks>
 internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
 {
-    private readonly ConcurrentDictionary<long, BaseStage> _stages = new();
-    private readonly ConcurrentDictionary<long, GameLoopTimer> _gameLoopTimers = new();
+    private readonly ConcurrentDictionary<string, BaseStage> _stages = new();
+    private readonly ConcurrentDictionary<string, GameLoopTimer> _gameLoopTimers = new();
     private readonly PlayProducer _producer;
     private readonly IClientCommunicator _communicator;
     private readonly RequestCache _requestCache;
@@ -182,7 +182,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
         }
     }
 
-    private void ProcessDestroy(long stageId)
+    private void ProcessDestroy(string stageId)
     {
         if (_stages.TryRemove(stageId, out var baseStage))
         {
@@ -266,7 +266,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     /// <param name="msgSeq">Message sequence number.</param>
     /// <param name="sid">Session ID.</param>
     /// <param name="payload">Message payload.</param>
-    public void RouteClientMessage(ITransportSession session, long stageId, string accountId, string msgId, ushort msgSeq, long sid, IPayload payload)
+    public void RouteClientMessage(ITransportSession session, string stageId, string accountId, string msgId, ushort msgSeq, long sid, IPayload payload)
     {
         // Optimization: Use ProcessorContext for direct routing if available
         if (session.ProcessorContext is ActorContext context)
@@ -295,7 +295,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     /// <summary>
     /// Handles CreateStageReq - creates a new Stage only if it doesn't exist.
     /// </summary>
-    private void HandleCreateStage(long stageId, RoutePacket packet)
+    private void HandleCreateStage(string stageId, RoutePacket packet)
     {
         try
         {
@@ -355,7 +355,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     /// <summary>
     /// Handles GetOrCreateStageReq - gets existing Stage or creates new one.
     /// </summary>
-    private void HandleGetOrCreateStage(long stageId, RoutePacket packet)
+    private void HandleGetOrCreateStage(string stageId, RoutePacket packet)
     {
         try
         {
@@ -384,7 +384,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
         }
     }
 
-    private BaseStage CreateNewStage(long stageId, string stageType)
+    private BaseStage CreateNewStage(string stageId, string stageType)
     {
         // Create temporary registry placeholder (will be replaced with BaseStage)
         var tempRegistry = new TempReplyPacketRegistry();
@@ -432,7 +432,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
 
     #region Timer Callback
 
-    private void OnTimerCallback(long stageId, long timerId, TimerCallbackDelegate callback)
+    private void OnTimerCallback(string stageId, long timerId, TimerCallbackDelegate callback)
     {
         if (_stages.TryGetValue(stageId, out var baseStage))
         {
@@ -453,7 +453,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     /// Callback from GameLoopTimer's dedicated thread.
     /// Dispatches a tick to the Stage's mailbox for sequential execution.
     /// </summary>
-    private void OnGameLoopTick(long stageId, GameLoopCallback callback, TimeSpan deltaTime, TimeSpan totalElapsed)
+    private void OnGameLoopTick(string stageId, GameLoopCallback callback, TimeSpan deltaTime, TimeSpan totalElapsed)
     {
         if (_stages.TryGetValue(stageId, out var baseStage))
         {
@@ -467,7 +467,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     }
 
     /// <inheritdoc/>
-    public void StartGameLoop(long stageId, GameLoopConfig config, GameLoopCallback callback)
+    public void StartGameLoop(string stageId, GameLoopConfig config, GameLoopCallback callback)
     {
         if (_gameLoopTimers.ContainsKey(stageId))
             throw new InvalidOperationException($"Game loop for Stage {stageId} is already running.");
@@ -484,7 +484,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     }
 
     /// <inheritdoc/>
-    public void StopGameLoop(long stageId)
+    public void StopGameLoop(string stageId)
     {
         if (_gameLoopTimers.TryRemove(stageId, out var timer))
         {
@@ -493,7 +493,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     }
 
     /// <inheritdoc/>
-    public bool IsGameLoopRunning(long stageId)
+    public bool IsGameLoopRunning(string stageId)
     {
         return _gameLoopTimers.ContainsKey(stageId);
     }
@@ -519,7 +519,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     /// </summary>
     /// <param name="stageId">The stage ID.</param>
     /// <returns>The BaseStage instance if it exists, otherwise null.</returns>
-    public BaseStage? GetStage(long stageId)
+    public BaseStage? GetStage(string stageId)
     {
         _stages.TryGetValue(stageId, out var stage);
         return stage;
@@ -531,7 +531,7 @@ internal sealed class PlayDispatcher : IPlayDispatcher, IDisposable
     /// <param name="stageId">The stage ID.</param>
     /// <param name="stageType">The stage type.</param>
     /// <returns>The BaseStage instance.</returns>
-    public BaseStage? GetOrCreateStage(long stageId, string stageType)
+    public BaseStage? GetOrCreateStage(string stageId, string stageType)
     {
         if (!_producer.IsValidType(stageType))
         {

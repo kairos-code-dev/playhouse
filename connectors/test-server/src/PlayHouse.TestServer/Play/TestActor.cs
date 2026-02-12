@@ -54,7 +54,7 @@ public class TestActor : IActor
                 return Task.FromResult<(bool, IPacket?)>((false, null));
             }
 
-            ActorLink.SetAuthContext(accountId.ToString(), stageId);
+            ActorLink.SetAuthContext(accountId.ToString(), stageId.ToString());
 
             _logger.LogInformation(
                 "Authenticating user: AccountId={AccountId}, UserId={UserId}, Token={Token}",
