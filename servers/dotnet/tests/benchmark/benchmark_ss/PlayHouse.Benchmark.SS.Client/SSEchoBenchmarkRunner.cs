@@ -114,6 +114,14 @@ public class SSEchoBenchmarkRunner(
         await Task.Delay(2000);
         var serverMetrics = await metricsClient.GetMetricsAsync();
 
+        // Send mode는 Trigger 응답이 "요청한 배치 크기"를 반환하므로,
+        // 실제 완료량 기준 집계를 위해 서버의 처리 카운트를 사용한다.
+        if (commMode == SSCommMode.Send && serverMetrics != null)
+        {
+            totalS2SMessages = serverMetrics.ProcessedMessages;
+            clientObservedTps = totalS2SMessages / (totalElapsedSec > 0 ? totalElapsedSec : 1);
+        }
+
         Log.Information("================================================================================");
         Log.Information("S2S BENCHMARK RESULT");
         Log.Information("================================================================================");

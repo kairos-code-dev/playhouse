@@ -15,6 +15,7 @@ public class BenchmarkStage : IStage
 {
     private readonly ILogger<BenchmarkStage> _logger;
     private readonly ConcurrentQueue<long> _latencyQueue = new();
+    private long _metricsGeneration = -1;
 
     public BenchmarkStage(IStageLink stageLink, ILogger<BenchmarkStage>? logger = null)
     {
@@ -58,9 +59,14 @@ public class BenchmarkStage : IStage
     {
         var req = TriggerSSEchoRequest.Parser.ParseFrom(packet.Payload.DataSpan);
         var sw = Stopwatch.StartNew();
-        
-        // 큐 초기화 (이전 테스트 잔재 제거)
-        _latencyQueue.Clear();
+
+        // Metrics reset 경계에서만 큐를 정리해 warmup 잔여 응답을 분리한다.
+        var generation = ServerMetricsCollector.Instance.Generation;
+        if (generation != Interlocked.Read(ref _metricsGeneration))
+        {
+            _latencyQueue.Clear();
+            Interlocked.Exchange(ref _metricsGeneration, generation);
+        }
 
         var echoReq = new SSEchoRequest { Payload = req.Payload };
         var serializedData = echoReq.ToByteArray();

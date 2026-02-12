@@ -247,8 +247,18 @@ public class BenchmarkRunner(
 
             while (inFlight >= inflight)
             {
+                if (DateTime.UtcNow >= endTime)
+                {
+                    break;
+                }
+
                 connector.MainThreadAction();
                 await Task.Yield();
+            }
+
+            if (DateTime.UtcNow >= endTime)
+            {
+                break;
             }
 
             var packet = new ClientPacket("EchoRequest", payloadBytes);
@@ -264,10 +274,17 @@ public class BenchmarkRunner(
         }
 
         // 남은 요청 대기
-        while (inFlight > 0)
+        var callbackDrainDeadline = DateTime.UtcNow.AddSeconds(Math.Max(5, duration));
+        while (inFlight > 0 && DateTime.UtcNow < callbackDrainDeadline)
         {
             connector.MainThreadAction();
             await Task.Yield();
+        }
+
+        if (inFlight > 0)
+        {
+            Log.Warning("[Connection {ConnectionId}] Warmup callback drain timeout (remaining in-flight: {InFlight})",
+                connectionId, inFlight);
         }
     }
 
@@ -300,8 +317,18 @@ public class BenchmarkRunner(
 
                 while (inFlight >= inflight)
                 {
+                    if (DateTime.UtcNow >= endTime)
+                    {
+                        break;
+                    }
+
                     connector.MainThreadAction();
                     await Task.Yield();
+                }
+
+                if (DateTime.UtcNow >= endTime)
+                {
+                    break;
                 }
 
                 using var packet = new ClientPacket("SendRequest", payload);
@@ -319,10 +346,17 @@ public class BenchmarkRunner(
             }
 
             // 남은 응답 대기
-            while (inFlight > 0)
+            var warmupDrainDeadline = DateTime.UtcNow.AddSeconds(Math.Max(5, duration));
+            while (inFlight > 0 && DateTime.UtcNow < warmupDrainDeadline)
             {
                 connector.MainThreadAction();
                 await Task.Yield();
+            }
+
+            if (inFlight > 0)
+            {
+                Log.Warning("[Connection {ConnectionId}] Warmup send drain timeout (remaining in-flight: {InFlight})",
+                    connectionId, inFlight);
             }
         }
         finally
@@ -443,8 +477,18 @@ public class BenchmarkRunner(
             // In-flight 제한: 최대치에 도달하면 대기
             while (inFlight >= inflight)
             {
+                if (DateTime.UtcNow >= endTime)
+                {
+                    break;
+                }
+
                 connector.MainThreadAction(); // 대기 중에도 메시지 처리
                 await Task.Yield(); // 콜백 실행 기회 제공
+            }
+
+            if (DateTime.UtcNow >= endTime)
+            {
+                break;
             }
 
             var packet = new ClientPacket("EchoRequest", payloadBytes);
@@ -472,15 +516,17 @@ public class BenchmarkRunner(
         }
 
                     // 모든 응답 수신 대기 (남은 in-flight 요청)
-
-                    while (inFlight > 0)
-
+                    var callbackDrainDeadline = DateTime.UtcNow.AddSeconds(Math.Max(10, durationSeconds));
+                    while (inFlight > 0 && DateTime.UtcNow < callbackDrainDeadline)
                     {
-
                         connector.MainThreadAction();
-
                         await Task.Yield();
+                    }
 
+                    if (inFlight > 0)
+                    {
+                        Log.Warning("[Connection {ConnectionId}] Callback drain timeout (remaining in-flight: {InFlight})",
+                            connectionId, inFlight);
                     }
 
         
@@ -535,8 +581,18 @@ public class BenchmarkRunner(
                 // In-flight 제한: 최대치에 도달하면 대기
                 while (inFlight >= inflight)
                 {
+                    if (DateTime.UtcNow >= endTime)
+                    {
+                        break;
+                    }
+
                     connector.MainThreadAction();
                     await Task.Yield(); // 콜백 실행 기회 제공
+                }
+
+                if (DateTime.UtcNow >= endTime)
+                {
+                    break;
                 }
 
                 timestamps.Enqueue(Stopwatch.GetTimestamp());
@@ -560,10 +616,17 @@ public class BenchmarkRunner(
             }
 
             // 모든 응답 수신 대기 (남은 in-flight 요청)
-            while (inFlight > 0)
+            var sendDrainDeadline = DateTime.UtcNow.AddSeconds(Math.Max(10, durationSeconds));
+            while (inFlight > 0 && DateTime.UtcNow < sendDrainDeadline)
             {
                 connector.MainThreadAction();
                 await Task.Yield();
+            }
+
+            if (inFlight > 0)
+            {
+                Log.Warning("[Connection {ConnectionId}] Send drain timeout (remaining in-flight: {InFlight})",
+                    connectionId, inFlight);
             }
 
             if (receivedCount < sentCount)

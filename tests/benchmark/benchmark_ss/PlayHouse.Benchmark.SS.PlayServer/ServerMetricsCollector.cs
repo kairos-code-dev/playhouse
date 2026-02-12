@@ -12,12 +12,15 @@ public class ServerMetricsCollector
 
     private long _processedMessages;
     private long _totalBytes;
+    private long _generation;
     private readonly ConcurrentQueue<long> _latencies = new();
     private long _startTicks = Stopwatch.GetTimestamp();
     
     // CPU 측정용
     private TimeSpan _startCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
     private DateTime _startTime = DateTime.UtcNow;
+
+    public long Generation => Interlocked.Read(ref _generation);
 
     public void RecordMessage(long latencyTicks, long bytes)
     {
@@ -31,6 +34,7 @@ public class ServerMetricsCollector
 
     public void Reset()
     {
+        Interlocked.Increment(ref _generation);
         Interlocked.Exchange(ref _processedMessages, 0);
         Interlocked.Exchange(ref _totalBytes, 0);
         _latencies.Clear();
