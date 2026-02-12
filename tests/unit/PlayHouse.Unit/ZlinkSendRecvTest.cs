@@ -144,7 +144,7 @@ public class ZlinkSendRecvTest : IDisposable
 
         clientSocket.Send("server1", packet);
 
-        // ProbeRouter로 인한 빈 probe 프레임(null)을 건너뛰고 실제 패킷을 기다린다.
+        // 연결 직후 타이밍 이슈를 피하기 위해 짧게 재시도하며 수신한다.
         RoutePacket? receivedPacket = null;
         for (var i = 0; i < 3 && receivedPacket == null; i++)
         {
@@ -192,7 +192,7 @@ public class ZlinkSendRecvTest : IDisposable
 
         clientSocket.Send("self1", packet);
 
-        // Then - Should receive own message (probe 프레임은 건너뛴다)
+        // Then - Should receive own message
         RoutePacket? receivedPacket = null;
         for (var i = 0; i < 3 && receivedPacket == null; i++)
         {
@@ -249,7 +249,7 @@ public class ZlinkSendRecvTest : IDisposable
 
         sendException.Should().BeNull("Send should not throw exception after connection is established");
 
-        // Probe 프레임(null)을 건너뛰고 실제 메시지를 확인한다.
+        // 연결 직후 타이밍 이슈를 피하기 위해 짧게 재시도하며 수신한다.
         RoutePacket? received = null;
         for (var i = 0; i < 3 && received == null; i++)
         {

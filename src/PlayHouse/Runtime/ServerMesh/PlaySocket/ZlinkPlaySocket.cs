@@ -17,7 +17,6 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
     private const int ZlinkEagainLinux = 11;
     private const int ZlinkEagainMac = 35;
     private const int ZlinkEwouldblockWindows = 10035;
-    private const int ProbeRouterEnabled = 1;
     private const int RouterHandoverEnabled = 1;
     private const int RouterMandatoryEnabled = 1;
     private const int ImmediateDisabled = 0;
@@ -33,12 +32,13 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
     private readonly ConcurrentDictionary<int, string> _receivedServerIdCache = new();
     private readonly ConcurrentDictionary<string, byte> _readyRouterIds;
     private readonly int _receiveTimeoutMs;
+    private readonly bool _useMonitorReadyGate;
     private static long _monitorLogCount;
     private static readonly int _monitorLogLimit =
         int.TryParse(Environment.GetEnvironmentVariable("PLAYHOUSE_ZLINK_MONITOR_LOG_LIMIT"), out var monitorLogLimit) && monitorLogLimit > 0
             ? monitorLogLimit
             : 200;
-    private static readonly bool _enableSocketMonitor =
+    private static readonly bool _enableMonitorLogging =
         string.Equals(Environment.GetEnvironmentVariable("PLAYHOUSE_ZLINK_MONITOR"), "1", StringComparison.Ordinal);
     private bool _disposed;
     private string? _boundEndpoint;
@@ -89,31 +89,30 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
         _socket = new Socket(context, SocketType.Router);
         ConfigureSocket(_socket, socketConfig);
 
-        if (_enableSocketMonitor)
+        var monitorReadyGateEnabled = false;
+        try
         {
-            try
+            _monitor = _socket.MonitorOpen(SocketEvent.All);
+            _monitorCts = new CancellationTokenSource();
+            _monitorThread = new Thread(() => MonitorLoop(_monitor, _monitorCts.Token))
             {
-                _monitor = _socket.MonitorOpen(
-                    SocketEvent.All);
-                _monitorCts = new CancellationTokenSource();
-                _monitorThread = new Thread(() => MonitorLoop(_monitor, _monitorCts.Token))
-                {
-                    IsBackground = true,
-                    Name = $"zlink-monitor:{ServerId}"
-                };
-                _monitorThread.Start();
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ZlinkPlaySocket] Monitor setup failed: {ex.Message}");
-            }
+                IsBackground = true,
+                Name = $"zlink-monitor:{ServerId}"
+            };
+            _monitorThread.Start();
+            monitorReadyGateEnabled = true;
         }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ZlinkPlaySocket] Monitor setup failed, falling back to send-without-ready-gate: {ex.Message}");
+        }
+
+        _useMonitorReadyGate = monitorReadyGateEnabled;
     }
 
     private void ConfigureSocket(Socket socket, PlaySocketConfig config)
     {
         socket.SetOption(SocketOption.RoutingId, _serverIdBytes);
-        socket.SetOption(SocketOption.ProbeRouter, ProbeRouterEnabled);
         socket.SetOption(SocketOption.RouterHandover, RouterHandoverEnabled);
         socket.SetOption(SocketOption.RouterMandatory, RouterMandatoryEnabled);
         socket.SetOption(SocketOption.Immediate, ImmediateDisabled);
@@ -142,6 +141,8 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
         ThrowIfDisposed();
         if (!string.IsNullOrWhiteSpace(routerId))
         {
+            MarkRouterIdNotReady(routerId);
+            _routerIdBytesCache.TryAdd(routerId, Encoding.UTF8.GetBytes(routerId));
             _socket.SetOption(SocketOption.ConnectRoutingId, routerId);
         }
 
@@ -231,8 +232,6 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
 
             if (headerLen <= 0)
             {
-                // Probe message: [routerId][empty-frame]
-                MarkRouterIdReady(senderRouterId);
                 continue;
             }
 
@@ -240,10 +239,6 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
             try
             {
                 header.MergeFrom(_recvHeaderBuffer.AsSpan(0, headerLen));
-                if (!string.IsNullOrEmpty(header.From))
-                {
-                    MarkRouterIdReady(header.From);
-                }
             }
             catch
             {
@@ -300,6 +295,11 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
     public bool IsRouterIdReady(string routerId)
     {
         if (string.IsNullOrWhiteSpace(routerId))
+        {
+            return true;
+        }
+
+        if (!_useMonitorReadyGate)
         {
             return true;
         }
@@ -437,11 +437,31 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
             try
             {
                 var evt = monitor.Receive(ReceiveFlags.DontWait);
+                var socketEvent = (SocketEvent)evt.Event;
+                if (TryResolveMonitorRouterId(evt.RoutingId, out var monitorRouterId))
+                {
+                    if ((socketEvent & SocketEvent.ConnectionReady) != 0)
+                    {
+                        MarkRouterIdReady(monitorRouterId);
+                    }
+                    else if ((socketEvent & (SocketEvent.Disconnected
+                                             | SocketEvent.ConnectDelayed
+                                             | SocketEvent.ConnectRetried
+                                             | SocketEvent.Closed
+                                             | SocketEvent.CloseFailed
+                                             | SocketEvent.HandshakeFailedNoDetail
+                                             | SocketEvent.HandshakeFailedProtocol
+                                             | SocketEvent.HandshakeFailedAuth)) != 0)
+                    {
+                        MarkRouterIdNotReady(monitorRouterId);
+                    }
+                }
+
                 var monitorLogCount = Interlocked.Increment(ref _monitorLogCount);
-                if (monitorLogCount <= _monitorLogLimit)
+                if (_enableMonitorLogging && monitorLogCount <= _monitorLogLimit)
                 {
                     Console.Error.WriteLine(
-                        $"[ZlinkPlaySocket] Monitor event={(SocketEvent)evt.Event}, serverId={ServerId}, rid={FormatRoutingId(evt.RoutingId)}, local={evt.LocalAddress}, remote={evt.RemoteAddress}, value={evt.Value}");
+                        $"[ZlinkPlaySocket] Monitor event={socketEvent}, serverId={ServerId}, rid={FormatRoutingId(evt.RoutingId)}, local={evt.LocalAddress}, remote={evt.RemoteAddress}, value={evt.Value}");
                 }
             }
             catch (ZlinkException ex) when (IsWouldBlock(ex.Errno))
@@ -480,6 +500,45 @@ internal sealed class ZlinkPlaySocket : IPlaySocket
         return printable
             ? Encoding.UTF8.GetString(routingId)
             : Convert.ToHexString(routingId);
+    }
+
+    private bool TryResolveMonitorRouterId(byte[] routingIdBytes, out string routerId)
+    {
+        routerId = string.Empty;
+        if (routingIdBytes.Length == 0)
+        {
+            return false;
+        }
+
+        if (routingIdBytes.AsSpan().SequenceEqual(_serverIdBytes))
+        {
+            routerId = ServerId;
+            return true;
+        }
+
+        foreach (var kv in _routerIdBytesCache)
+        {
+            if (routingIdBytes.AsSpan().SequenceEqual(kv.Value))
+            {
+                routerId = kv.Key;
+                return true;
+            }
+        }
+
+        var decoded = Encoding.UTF8.GetString(routingIdBytes);
+        var nullIndex = decoded.IndexOf('\0');
+        if (nullIndex >= 0)
+        {
+            decoded = decoded[..nullIndex];
+        }
+
+        if (string.IsNullOrWhiteSpace(decoded))
+        {
+            return false;
+        }
+
+        routerId = decoded;
+        return true;
     }
 
     private void MarkRouterIdReady(string routerId)

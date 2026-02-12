@@ -55,6 +55,7 @@ internal sealed class XClientCommunicator : IClientCommunicator
     public void Connect(string targetServerId, string address)
     {
         if (!_connected.TryAdd(address, 0)) return;
+        _socket.MarkRouterIdNotReady(targetServerId);
         _socket.Connect(address, targetServerId);
     }
 
