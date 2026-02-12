@@ -385,6 +385,7 @@ public static class ServerFactory
             .UseLoggerFactory(loggerFactory)
             .UseServiceProvider(serviceProvider)
             .UseStage<TestStageImpl, TestActorImpl>(defaultStageType)
+            .UseStage<TestStageImpl, TestActorImpl>("SingleStage", StageMode.Single)
             .UseSystemController<TestSystemController>()
             .Build();
 
@@ -433,6 +434,7 @@ public static class ServerFactory
             .UseLoggerFactory(loggerFactory)
             .UseServiceProvider(serviceProvider)
             .UseStage<TestStageImpl, TestActorImpl>(defaultStageType)
+            .UseStage<TestStageImpl, TestActorImpl>("SingleStage", StageMode.Single)
             .UseSystemController<TestSystemController>()
             .Build();
 
