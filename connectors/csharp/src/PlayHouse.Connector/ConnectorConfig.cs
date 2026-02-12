@@ -64,4 +64,10 @@ public sealed class ConnectorConfig
     /// 추적 로깅 활성화
     /// </summary>
     public bool TurnOnTrace { get; set; }
+
+    /// <summary>
+    /// 송신 시 헤더/페이로드 분리 전송 활성화.
+    /// true면 payload 최종 복사를 줄이는 segmented send 경로를 사용합니다.
+    /// </summary>
+    public bool EnableSegmentedSend { get; set; } = true;
 }

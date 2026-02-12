@@ -49,6 +49,28 @@ public sealed class Packet : IPacket
         Payload = new BytePayload(data);
     }
 
+    /// <summary>
+    /// 메시지 ID와 ReadOnlySpan으로 패킷 생성 (복사)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="data">바이트 Span 데이터</param>
+    public Packet(string msgId, ReadOnlySpan<byte> data)
+    {
+        MsgId = msgId ?? throw new ArgumentNullException(nameof(msgId));
+        Payload = new BytePayload(data);
+    }
+
+    /// <summary>
+    /// 메시지 ID와 ReadOnlyMemory로 패킷 생성 (Zero-copy)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="data">바이트 Memory 데이터</param>
+    public Packet(string msgId, ReadOnlyMemory<byte> data)
+    {
+        MsgId = msgId ?? throw new ArgumentNullException(nameof(msgId));
+        Payload = new MemoryPayload(data);
+    }
+
     /// <inheritdoc/>
     public string MsgId { get; }
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PlayHouse.Abstractions;
+using PlayHouse.Abstractions.Play;
 using PlayHouse.Benchmark.Server;
 using PlayHouse.Core.Play.Bootstrap;
 using PlayHouse.Extensions;
@@ -149,7 +150,7 @@ try
         options.MinTaskPoolSize = minPoolSize;
         options.MaxTaskPoolSize = maxPoolSize;
     })
-    .UseStage<BenchmarkStage, BenchmarkActor>("BenchmarkStage")
+    .UseStage<BenchmarkStage, BenchmarkActor>("BenchmarkStage", StageMode.Single)
     .UseSystemController<BenchmarkSystemController>();
 
     var serviceProvider = services.BuildServiceProvider();

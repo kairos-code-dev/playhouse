@@ -61,6 +61,8 @@ public class BenchmarkRunner(
 
     public async Task RunAsync()
     {
+        _ = stageName;
+
         Log.Information("[{Time:HH:mm:ss}] Starting benchmark...", DateTime.Now);
         Log.Information("  Mode: {Mode}", mode);
         Log.Information("  Connections: {Connections:N0}", ccu);
@@ -332,7 +334,11 @@ public class BenchmarkRunner(
     private async Task<ClientConnector?> ConnectAndAuthenticateAsync(int connectionId)
     {
         var connector = new ClientConnector();
-        connector.Init(new ConnectorConfig());
+        var config = new ConnectorConfig
+        {
+            EnableSegmentedSend = IsSegmentedSendEnabled()
+        };
+        connector.Init(config);
 
         var stageId = 1000 + stageIdOffset + connectionId; // 각 연결마다 고유 StageId
 
@@ -570,6 +576,19 @@ public class BenchmarkRunner(
         {
             connector.OnReceive -= OnReceiveHandler;
         }
+    }
+
+    private static bool IsSegmentedSendEnabled()
+    {
+        var raw = Environment.GetEnvironmentVariable("PLAYHOUSE_SEGMENTED_SEND");
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return true;
+        }
+
+        return !raw.Equals("0", StringComparison.OrdinalIgnoreCase)
+               && !raw.Equals("false", StringComparison.OrdinalIgnoreCase)
+               && !raw.Equals("off", StringComparison.OrdinalIgnoreCase);
     }
 }
 

@@ -136,6 +136,14 @@ internal sealed class WebSocketConnection : IConnection
 
     public async ValueTask SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
     {
+        await SendAsync(data, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask SendAsync(
+        ReadOnlyMemory<byte> header,
+        ReadOnlyMemory<byte> payload,
+        CancellationToken cancellationToken = default)
+    {
         if (!_isConnected || _webSocket == null || _webSocket.State != WebSocketState.Open)
         {
             throw new InvalidOperationException("Not connected.");
@@ -144,11 +152,31 @@ internal sealed class WebSocketConnection : IConnection
         await _sendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await _webSocket.SendAsync(
-                data,
-                WebSocketMessageType.Binary,
-                endOfMessage: true,
-                cancellationToken).ConfigureAwait(false);
+            if (payload.IsEmpty)
+            {
+                await _webSocket.SendAsync(
+                    header,
+                    WebSocketMessageType.Binary,
+                    endOfMessage: true,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                if (!header.IsEmpty)
+                {
+                    await _webSocket.SendAsync(
+                        header,
+                        WebSocketMessageType.Binary,
+                        endOfMessage: false,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                await _webSocket.SendAsync(
+                    payload,
+                    WebSocketMessageType.Binary,
+                    endOfMessage: true,
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {

@@ -39,6 +39,7 @@ public class PayloadTests
 
         // Then (결과)
         data.Length.Should().Be(0, "빈 데이터여야 함");
+        payload.DataMemory.Length.Should().Be(0, "빈 Memory여야 함");
     }
 
     [Fact(DisplayName = "EmptyPayload.Dispose - 여러 번 호출해도 예외가 발생하지 않는다")]
@@ -116,6 +117,7 @@ public class PayloadTests
         span.Length.Should().Be(3, "Span 길이가 원본과 같아야 함");
         span[0].Should().Be(10);
         span[2].Should().Be(30);
+        payload.DataMemory.Span.SequenceEqual(span).Should().BeTrue("DataMemory와 DataSpan은 같은 데이터를 가리켜야 함");
     }
 
     #endregion
@@ -134,6 +136,42 @@ public class PayloadTests
 
         // Then (결과)
         data.Length.Should().BeGreaterThan(0, "직렬화된 데이터가 있어야 함");
+        payload.DataMemory.Length.Should().Be(data.Length, "DataMemory 길이는 DataSpan과 같아야 함");
+    }
+
+    [Fact(DisplayName = "MemoryPayload - DataMemory와 DataSpan이 같은 데이터를 반환한다")]
+    public void MemoryPayload_DataMemoryAndDataSpan_ReturnSameData()
+    {
+        // Given (전제조건)
+        var source = new byte[] { 1, 2, 3, 4 };
+        using var payload = new MemoryPayload(source.AsMemory());
+
+        // When (행동)
+        var span = payload.DataSpan;
+        var memory = payload.DataMemory;
+
+        // Then (결과)
+        memory.Length.Should().Be(span.Length);
+        memory.Span.SequenceEqual(span).Should().BeTrue();
+    }
+
+    [Fact(DisplayName = "ArrayPoolPayload - DataMemory는 DataSpan과 같은 길이를 반환한다")]
+    public void ArrayPoolPayload_DataMemory_HasSameLengthAsSpan()
+    {
+        // Given (전제조건)
+        var rented = ArrayPool<byte>.Shared.Rent(16);
+        rented[0] = 10;
+        rented[1] = 20;
+        rented[2] = 30;
+        using var payload = new ArrayPoolPayload(rented, 3);
+
+        // When (행동)
+        var span = payload.DataSpan;
+        var memory = payload.DataMemory;
+
+        // Then (결과)
+        memory.Length.Should().Be(span.Length);
+        memory.Span.SequenceEqual(span).Should().BeTrue();
     }
 
     [Fact(DisplayName = "ProtoPayload - 직렬화된 데이터가 역직렬화 가능하다")]

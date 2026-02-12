@@ -24,6 +24,7 @@ public class ConnectorConfigTests
         config.ConnectionIdleTimeoutMs.Should().Be(30000, "기본 연결 타임아웃은 30초");
         config.HeartBeatIntervalMs.Should().Be(10000, "기본 하트비트 간격은 10초");
         config.RequestTimeoutMs.Should().Be(30000, "기본 요청 타임아웃은 30초");
+        config.EnableSegmentedSend.Should().BeTrue("기본값은 segmented send 활성화");
     }
 
     [Fact(DisplayName = "UseWebsocket - WebSocket 사용 설정")]
@@ -92,7 +93,8 @@ public class ConnectorConfigTests
             UseWebsocket = true,
             ConnectionIdleTimeoutMs = 45000,
             HeartBeatIntervalMs = 15000,
-            RequestTimeoutMs = 20000
+            RequestTimeoutMs = 20000,
+            EnableSegmentedSend = false
         };
 
         // Then (결과)
@@ -100,5 +102,6 @@ public class ConnectorConfigTests
         config.ConnectionIdleTimeoutMs.Should().Be(45000);
         config.HeartBeatIntervalMs.Should().Be(15000);
         config.RequestTimeoutMs.Should().Be(20000);
+        config.EnableSegmentedSend.Should().BeFalse();
     }
 }

@@ -17,6 +17,8 @@ public sealed class EmptyPayload : IPayload
 
     public ReadOnlySpan<byte> DataSpan => ReadOnlySpan<byte>.Empty;
 
+    public ReadOnlyMemory<byte> DataMemory => ReadOnlyMemory<byte>.Empty;
+
     public void Dispose()
     {
         // Nothing to dispose
@@ -41,6 +43,8 @@ public sealed class BytePayload : IPayload
     }
 
     public ReadOnlySpan<byte> DataSpan => _data;
+
+    public ReadOnlyMemory<byte> DataMemory => _data;
 
     public void Dispose()
     {
@@ -76,6 +80,20 @@ public sealed class ProtoPayload : IPayload
         }
     }
 
+    public ReadOnlyMemory<byte> DataMemory
+    {
+        get
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(ProtoPayload));
+            }
+
+            _cachedData ??= _proto.ToByteArray();
+            return _cachedData;
+        }
+    }
+
     public void Dispose()
     {
         _disposed = true;
@@ -96,6 +114,8 @@ public sealed class MemoryPayload : IPayload
     }
 
     public ReadOnlySpan<byte> DataSpan => _data.Span;
+
+    public ReadOnlyMemory<byte> DataMemory => _data;
 
     public void Dispose()
     {
@@ -132,6 +152,19 @@ public sealed class ArrayPoolPayload : IPayload
                 throw new ObjectDisposedException(nameof(ArrayPoolPayload));
             }
             return _rentedBuffer.AsSpan(0, _actualSize);
+        }
+    }
+
+    public ReadOnlyMemory<byte> DataMemory
+    {
+        get
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(ArrayPoolPayload));
+            }
+
+            return _rentedBuffer.AsMemory(0, _actualSize);
         }
     }
 

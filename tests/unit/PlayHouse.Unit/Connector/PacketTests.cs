@@ -57,6 +57,37 @@ public class PacketTests
         packet.Payload.DataSpan.ToArray().Should().Equal(data, "바이트 데이터가 저장되어야 함");
     }
 
+    [Fact(DisplayName = "Packet - MsgId와 ReadOnlySpan으로 생성한다")]
+    public void Packet_CreateWithMsgIdAndReadOnlySpan()
+    {
+        // Given (전제조건)
+        var msgId = "SpanMessage";
+        var source = new byte[] { 1, 2, 3, 4 };
+
+        // When (행동)
+        using var packet = new Packet(msgId, source.AsSpan());
+
+        // Then (결과)
+        packet.MsgId.Should().Be(msgId);
+        packet.Payload.DataSpan.ToArray().Should().Equal(source);
+    }
+
+    [Fact(DisplayName = "Packet - MsgId와 ReadOnlyMemory로 생성하면 Zero-copy로 동작한다")]
+    public void Packet_CreateWithMsgIdAndReadOnlyMemory_UsesZeroCopy()
+    {
+        // Given (전제조건)
+        var msgId = "MemoryMessage";
+        var source = new byte[] { 10, 20, 30 };
+
+        // When (행동)
+        using var packet = new Packet(msgId, source.AsMemory());
+        source[1] = 99;
+
+        // Then (결과)
+        packet.MsgId.Should().Be(msgId);
+        packet.Payload.DataSpan[1].Should().Be(99, "ReadOnlyMemory 생성자는 원본 메모리를 직접 참조해야 함");
+    }
+
     [Fact(DisplayName = "Packet.Empty - 빈 Payload를 가진 Packet을 생성한다")]
     public void Packet_Empty_CreatesPacketWithEmptyPayload()
     {

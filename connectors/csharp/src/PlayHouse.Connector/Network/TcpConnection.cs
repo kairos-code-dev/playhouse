@@ -3,9 +3,11 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +27,9 @@ internal sealed class TcpConnection : IConnection
     private CancellationTokenSource? _receiveCts;
     private Task? _receiveTask;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private readonly List<ArraySegment<byte>> _gatherSendSegments = new(2);
     private volatile bool _isConnected;
+    private volatile bool _useSsl;
 
     private const int SendBufferSize = 65536;
     private const int ReceiveBufferSize = 262144; // 256KB for large payloads
@@ -103,6 +107,7 @@ internal sealed class TcpConnection : IConnection
             }
 
             _isConnected = true;
+            _useSsl = useSsl;
 
             // Start receiving data
             _receiveCts = new CancellationTokenSource();
@@ -123,6 +128,7 @@ internal sealed class TcpConnection : IConnection
         }
 
         _isConnected = false;
+        _useSsl = false;
 
         // Cancel receive loop
         _receiveCts?.Cancel();
@@ -149,6 +155,14 @@ internal sealed class TcpConnection : IConnection
 
     public async ValueTask SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
     {
+        await SendAsync(data, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask SendAsync(
+        ReadOnlyMemory<byte> header,
+        ReadOnlyMemory<byte> payload,
+        CancellationToken cancellationToken = default)
+    {
         if (!_isConnected || _stream == null)
         {
             throw new InvalidOperationException("Not connected.");
@@ -157,8 +171,26 @@ internal sealed class TcpConnection : IConnection
         await _sendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await _stream.WriteAsync(data, cancellationToken).ConfigureAwait(false);
-            await _stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+            if (!_useSsl &&
+                !header.IsEmpty &&
+                !payload.IsEmpty &&
+                _client != null &&
+                TryGetArraySegment(header, out var headerSegment) &&
+                TryGetArraySegment(payload, out var payloadSegment))
+            {
+                SendWithGatherLoop(_client.Client, headerSegment, payloadSegment, cancellationToken);
+                return;
+            }
+
+            if (!header.IsEmpty)
+            {
+                await _stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (!payload.IsEmpty)
+            {
+                await _stream.WriteAsync(payload, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -168,6 +200,65 @@ internal sealed class TcpConnection : IConnection
         finally
         {
             _sendLock.Release();
+        }
+    }
+
+    private static bool TryGetArraySegment(ReadOnlyMemory<byte> memory, out ArraySegment<byte> segment)
+    {
+        return MemoryMarshal.TryGetArray(memory, out segment);
+    }
+
+    private void SendWithGatherLoop(
+        Socket socket,
+        ArraySegment<byte> headerSegment,
+        ArraySegment<byte> payloadSegment,
+        CancellationToken cancellationToken)
+    {
+        int headerSent = 0;
+        int payloadSent = 0;
+
+        while (headerSent < headerSegment.Count || payloadSent < payloadSegment.Count)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _gatherSendSegments.Clear();
+
+            if (headerSent < headerSegment.Count)
+            {
+                _gatherSendSegments.Add(new ArraySegment<byte>(
+                    headerSegment.Array!,
+                    headerSegment.Offset + headerSent,
+                    headerSegment.Count - headerSent));
+            }
+
+            if (payloadSent < payloadSegment.Count)
+            {
+                _gatherSendSegments.Add(new ArraySegment<byte>(
+                    payloadSegment.Array!,
+                    payloadSegment.Offset + payloadSent,
+                    payloadSegment.Count - payloadSent));
+            }
+
+            var bytesSent = socket.Send(_gatherSendSegments, SocketFlags.None);
+            if (bytesSent <= 0)
+            {
+                throw new IOException("Socket send returned 0 bytes.");
+            }
+
+            if (headerSent < headerSegment.Count)
+            {
+                var headerRemaining = headerSegment.Count - headerSent;
+                var sentFromHeader = Math.Min(bytesSent, headerRemaining);
+                headerSent += sentFromHeader;
+                bytesSent -= sentFromHeader;
+            }
+
+            if (bytesSent > 0 && payloadSent < payloadSegment.Count)
+            {
+                var payloadRemaining = payloadSegment.Count - payloadSent;
+                var sentFromPayload = Math.Min(bytesSent, payloadRemaining);
+                payloadSent += sentFromPayload;
+            }
         }
     }
 

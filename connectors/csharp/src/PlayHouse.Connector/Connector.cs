@@ -240,6 +240,26 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
     }
 
     /// <summary>
+    /// 메시지 전송 (응답 없음, ReadOnlyMemory 기반 Zero-copy 경로)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="payload">전송할 페이로드</param>
+    public void Send(string msgId, ReadOnlyMemory<byte> payload)
+    {
+        Send(new Packet(msgId, payload));
+    }
+
+    /// <summary>
+    /// 메시지 전송 (응답 없음, ReadOnlySpan 입력은 내부 복사됨)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="payload">전송할 페이로드</param>
+    public void Send(string msgId, ReadOnlySpan<byte> payload)
+    {
+        Send(new Packet(msgId, payload));
+    }
+
+    /// <summary>
     /// 요청 전송 (콜백 방식)
     /// </summary>
     /// <param name="request">요청 패킷</param>
@@ -256,6 +276,28 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
     }
 
     /// <summary>
+    /// 요청 전송 (콜백 방식, ReadOnlyMemory 기반 Zero-copy 경로)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="payload">요청 페이로드</param>
+    /// <param name="callback">응답 콜백</param>
+    public void Request(string msgId, ReadOnlyMemory<byte> payload, Action<IPacket> callback)
+    {
+        Request(new Packet(msgId, payload), callback);
+    }
+
+    /// <summary>
+    /// 요청 전송 (콜백 방식, ReadOnlySpan 입력은 내부 복사됨)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="payload">요청 페이로드</param>
+    /// <param name="callback">응답 콜백</param>
+    public void Request(string msgId, ReadOnlySpan<byte> payload, Action<IPacket> callback)
+    {
+        Request(new Packet(msgId, payload), callback);
+    }
+
+    /// <summary>
     /// 요청 전송 (async/await 방식)
     /// </summary>
     /// <param name="request">요청 패킷</param>
@@ -268,6 +310,28 @@ public sealed class Connector : IConnectorCallback, IAsyncDisposable
         }
 
         return await _clientNetwork!.RequestAsync(request, _stageId);
+    }
+
+    /// <summary>
+    /// 요청 전송 (async/await 방식, ReadOnlyMemory 기반 Zero-copy 경로)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="payload">요청 페이로드</param>
+    /// <returns>응답 패킷</returns>
+    public Task<IPacket> RequestAsync(string msgId, ReadOnlyMemory<byte> payload)
+    {
+        return RequestAsync(new Packet(msgId, payload));
+    }
+
+    /// <summary>
+    /// 요청 전송 (async/await 방식, ReadOnlySpan 입력은 내부 복사됨)
+    /// </summary>
+    /// <param name="msgId">메시지 ID</param>
+    /// <param name="payload">요청 페이로드</param>
+    /// <returns>응답 패킷</returns>
+    public Task<IPacket> RequestAsync(string msgId, ReadOnlySpan<byte> payload)
+    {
+        return RequestAsync(new Packet(msgId, payload));
     }
 
     #endregion

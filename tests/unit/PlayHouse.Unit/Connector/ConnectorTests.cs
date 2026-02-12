@@ -178,6 +178,56 @@ public class ConnectorTests
             "연결되지 않은 상태에서 Send하면 Disconnected 에러가 발생해야 함");
     }
 
+    [Fact(DisplayName = "Send(ReadOnlyMemory) - 연결되지 않은 상태에서 OnError 이벤트 발생")]
+    public void Send_ReadOnlyMemory_NotConnected_TriggersOnError()
+    {
+        // Given (전제조건)
+        var connector = new ClientConnector();
+        connector.Init(new ConnectorConfig());
+
+        ushort receivedErrorCode = 0;
+        string? receivedMsgId = null;
+        connector.OnError += (stageId, stageType, errorCode, request) =>
+        {
+            receivedErrorCode = errorCode;
+            receivedMsgId = request.MsgId;
+        };
+
+        var payload = new byte[] { 1, 2, 3 }.AsMemory();
+
+        // When (행동)
+        connector.Send("Test.MemorySend", payload);
+
+        // Then (결과)
+        receivedErrorCode.Should().Be((ushort)ConnectorErrorCode.Disconnected);
+        receivedMsgId.Should().Be("Test.MemorySend");
+    }
+
+    [Fact(DisplayName = "Send(ReadOnlySpan) - 연결되지 않은 상태에서 OnError 이벤트 발생")]
+    public void Send_ReadOnlySpan_NotConnected_TriggersOnError()
+    {
+        // Given (전제조건)
+        var connector = new ClientConnector();
+        connector.Init(new ConnectorConfig());
+
+        ushort receivedErrorCode = 0;
+        string? receivedMsgId = null;
+        connector.OnError += (stageId, stageType, errorCode, request) =>
+        {
+            receivedErrorCode = errorCode;
+            receivedMsgId = request.MsgId;
+        };
+
+        var payload = new byte[] { 10, 20, 30 }.AsSpan();
+
+        // When (행동)
+        connector.Send("Test.SpanSend", payload);
+
+        // Then (결과)
+        receivedErrorCode.Should().Be((ushort)ConnectorErrorCode.Disconnected);
+        receivedMsgId.Should().Be("Test.SpanSend");
+    }
+
     [Fact(DisplayName = "Request - 연결되지 않은 상태에서 OnError 이벤트 발생")]
     public void Request_NotConnected_TriggersOnError()
     {
@@ -201,6 +251,56 @@ public class ConnectorTests
             "연결되지 않은 상태에서 Request하면 Disconnected 에러가 발생해야 함");
     }
 
+    [Fact(DisplayName = "Request(ReadOnlyMemory) - 연결되지 않은 상태에서 OnError 이벤트 발생")]
+    public void Request_ReadOnlyMemory_NotConnected_TriggersOnError()
+    {
+        // Given (전제조건)
+        var connector = new ClientConnector();
+        connector.Init(new ConnectorConfig());
+
+        ushort receivedErrorCode = 0;
+        string? receivedMsgId = null;
+        connector.OnError += (stageId, stageType, errorCode, request) =>
+        {
+            receivedErrorCode = errorCode;
+            receivedMsgId = request.MsgId;
+        };
+
+        var payload = new byte[] { 7, 8, 9 }.AsMemory();
+
+        // When (행동)
+        connector.Request("Test.MemoryRequest", payload, response => { });
+
+        // Then (결과)
+        receivedErrorCode.Should().Be((ushort)ConnectorErrorCode.Disconnected);
+        receivedMsgId.Should().Be("Test.MemoryRequest");
+    }
+
+    [Fact(DisplayName = "Request(ReadOnlySpan) - 연결되지 않은 상태에서 OnError 이벤트 발생")]
+    public void Request_ReadOnlySpan_NotConnected_TriggersOnError()
+    {
+        // Given (전제조건)
+        var connector = new ClientConnector();
+        connector.Init(new ConnectorConfig());
+
+        ushort receivedErrorCode = 0;
+        string? receivedMsgId = null;
+        connector.OnError += (stageId, stageType, errorCode, request) =>
+        {
+            receivedErrorCode = errorCode;
+            receivedMsgId = request.MsgId;
+        };
+
+        var payload = new byte[] { 70, 80, 90 }.AsSpan();
+
+        // When (행동)
+        connector.Request("Test.SpanRequest", payload, response => { });
+
+        // Then (결과)
+        receivedErrorCode.Should().Be((ushort)ConnectorErrorCode.Disconnected);
+        receivedMsgId.Should().Be("Test.SpanRequest");
+    }
+
     [Fact(DisplayName = "RequestAsync - 연결되지 않은 상태에서 예외 발생")]
     public async Task RequestAsync_NotConnected_ThrowsException()
     {
@@ -217,6 +317,38 @@ public class ConnectorTests
         await action.Should().ThrowAsync<ConnectorException>()
             .Where(ex => ex.ErrorCode == (ushort)ConnectorErrorCode.Disconnected,
                 "연결되지 않은 상태에서 예외가 발생해야 함");
+    }
+
+    [Fact(DisplayName = "RequestAsync(ReadOnlyMemory) - 연결되지 않은 상태에서 예외 발생")]
+    public async Task RequestAsync_ReadOnlyMemory_NotConnected_ThrowsException()
+    {
+        // Given (전제조건)
+        var connector = new ClientConnector();
+        connector.Init(new ConnectorConfig());
+        var payload = new byte[] { 1, 1, 2, 3 }.AsMemory();
+
+        // When (행동)
+        var action = async () => await connector.RequestAsync("Test.MemoryRequestAsync", payload);
+
+        // Then (결과)
+        await action.Should().ThrowAsync<ConnectorException>()
+            .Where(ex => ex.ErrorCode == (ushort)ConnectorErrorCode.Disconnected);
+    }
+
+    [Fact(DisplayName = "RequestAsync(ReadOnlySpan) - 연결되지 않은 상태에서 예외 발생")]
+    public async Task RequestAsync_ReadOnlySpan_NotConnected_ThrowsException()
+    {
+        // Given (전제조건)
+        var connector = new ClientConnector();
+        connector.Init(new ConnectorConfig());
+        var payload = new byte[] { 4, 5, 6 };
+
+        // When (행동)
+        Func<Task> action = () => connector.RequestAsync("Test.SpanRequestAsync", payload.AsSpan());
+
+        // Then (결과)
+        await action.Should().ThrowAsync<ConnectorException>()
+            .Where(ex => ex.ErrorCode == (ushort)ConnectorErrorCode.Disconnected);
     }
 
     [Fact(DisplayName = "Authenticate - 연결되지 않은 상태에서 OnError 이벤트 발생")]

@@ -15,6 +15,11 @@ public interface IPayload : IDisposable
     ReadOnlySpan<byte> DataSpan { get; }
 
     /// <summary>
+    /// 페이로드 데이터 Memory
+    /// </summary>
+    ReadOnlyMemory<byte> DataMemory { get; }
+
+    /// <summary>
     /// 페이로드 길이
     /// </summary>
     int Length => DataSpan.Length;

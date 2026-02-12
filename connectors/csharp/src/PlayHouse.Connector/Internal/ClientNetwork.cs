@@ -4,6 +4,7 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
@@ -21,6 +22,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
     private readonly ConnectorConfig _config;
     private readonly IConnectorCallback _callback;
     private readonly AsyncManager _asyncManager = new();
+    private readonly ConcurrentDictionary<string, byte[]> _msgIdUtf8Cache = new(StringComparer.Ordinal);
     private readonly SynchronizationContext? _syncContext;
 
     private IConnection? _connection;
@@ -202,6 +204,13 @@ internal sealed class ClientNetwork : IAsyncDisposable
             return;
         }
 
+        if (_config.EnableSegmentedSend && TryGetPayloadForSegmentedSend(packet.Payload, out var payloadMemory))
+        {
+            var (headerBuffer, headerLength) = EncodePacketHeader(packet.MsgId, 0, payloadMemory.Length);
+            _ = SendAndReturnHeaderBufferAsync(headerBuffer, headerLength, payloadMemory);
+            return;
+        }
+
         var (buffer, length) = EncodePacket(packet, 0, stageId);
         _ = SendAndReturnBufferAsync(buffer, length);
     }
@@ -210,12 +219,25 @@ internal sealed class ClientNetwork : IAsyncDisposable
     {
         try
         {
-            await _connection!.SendAsync(buffer.AsMemory(0, length));
+            await _connection!.SendAsync(buffer.AsMemory(0, length)).ConfigureAwait(false);
         }
         finally
         {
             // Fix #13: Clear buffer to avoid leaking sensitive data
             ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+        }
+    }
+
+    private async Task SendAndReturnHeaderBufferAsync(byte[] headerBuffer, int headerLength, ReadOnlyMemory<byte> payload)
+    {
+        try
+        {
+            await _connection!.SendAsync(headerBuffer.AsMemory(0, headerLength), payload).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Fix #13: Clear buffer to avoid leaking sensitive data
+            ArrayPool<byte>.Shared.Return(headerBuffer, clearArray: true);
         }
     }
 
@@ -241,10 +263,20 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
         _pendingRequests[msgSeq] = pending;
 
-        var (buffer, length) = EncodePacket(request, msgSeq, stageId);
+        Task sendTask;
+        if (_config.EnableSegmentedSend && TryGetPayloadForSegmentedSend(request.Payload, out var payloadMemory))
+        {
+            var (headerBuffer, headerLength) = EncodePacketHeader(request.MsgId, msgSeq, payloadMemory.Length);
+            sendTask = SendRequestAsync(msgSeq, headerBuffer, headerLength, payloadMemory, timeoutCts.Token);
+        }
+        else
+        {
+            var (buffer, length) = EncodePacket(request, msgSeq, stageId);
+            sendTask = SendRequestAsync(msgSeq, buffer, length, timeoutCts.Token);
+        }
 
         // Fix #14: SendAsync와 타임아웃을 fire-and-forget으로 실행하되, unhandled exceptions를 로깅
-        _ = SendRequestAsync(msgSeq, buffer, length, timeoutCts.Token).ContinueWith(t =>
+        _ = sendTask.ContinueWith(t =>
         {
             if (t.IsFaulted && t.Exception != null)
             {
@@ -258,7 +290,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
     {
         try
         {
-            await _connection!.SendAsync(buffer.AsMemory(0, length));
+            await _connection!.SendAsync(buffer.AsMemory(0, length)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -282,10 +314,51 @@ internal sealed class ClientNetwork : IAsyncDisposable
             ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
         }
 
+        await WaitForRequestTimeoutAsync(msgSeq, timeoutToken).ConfigureAwait(false);
+    }
+
+    private async Task SendRequestAsync(
+        ushort msgSeq,
+        byte[] headerBuffer,
+        int headerLength,
+        ReadOnlyMemory<byte> payload,
+        CancellationToken timeoutToken)
+    {
+        try
+        {
+            await _connection!.SendAsync(headerBuffer.AsMemory(0, headerLength), payload).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // 전송 실패 시 pending request 제거하고 에러 콜백
+            if (_pendingRequests.TryRemove(msgSeq, out var req))
+            {
+                // Log synchronous send error (fire-and-forget pattern)
+                Console.WriteLine($"[ClientNetwork] Request send failed - msgSeq={msgSeq}, msgId={req.Request.MsgId}, stageId={req.StageId}, error={ex.Message}");
+
+                req.Dispose();
+                _asyncManager.AddJob(() =>
+                {
+                    _callback.ErrorCallback(req.StageId, (ushort)ConnectorErrorCode.Disconnected, req.Request);
+                });
+            }
+            return;
+        }
+        finally
+        {
+            // Fix #13: Clear buffer to avoid leaking sensitive data
+            ArrayPool<byte>.Shared.Return(headerBuffer, clearArray: true);
+        }
+
+        await WaitForRequestTimeoutAsync(msgSeq, timeoutToken).ConfigureAwait(false);
+    }
+
+    private async Task WaitForRequestTimeoutAsync(ushort msgSeq, CancellationToken timeoutToken)
+    {
         // 타임아웃 설정 - 응답 도착 시 취소됨
         try
         {
-            await Task.Delay(_config.RequestTimeoutMs, timeoutToken);
+            await Task.Delay(_config.RequestTimeoutMs, timeoutToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -326,15 +399,31 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
         _pendingRequests[msgSeq] = pending;
 
-        var (buffer, length) = EncodePacket(request, msgSeq, stageId);
-        try
+        if (_config.EnableSegmentedSend && TryGetPayloadForSegmentedSend(request.Payload, out var payloadMemory))
         {
-            await _connection!.SendAsync(buffer.AsMemory(0, length));
+            var (headerBuffer, headerLength) = EncodePacketHeader(request.MsgId, msgSeq, payloadMemory.Length);
+            try
+            {
+                await _connection!.SendAsync(headerBuffer.AsMemory(0, headerLength), payloadMemory).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Fix #13: Clear buffer to avoid leaking sensitive data
+                ArrayPool<byte>.Shared.Return(headerBuffer, clearArray: true);
+            }
         }
-        finally
+        else
         {
-            // Fix #13: Clear buffer to avoid leaking sensitive data
-            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+            var (buffer, length) = EncodePacket(request, msgSeq, stageId);
+            try
+            {
+                await _connection!.SendAsync(buffer.AsMemory(0, length)).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Fix #13: Clear buffer to avoid leaking sensitive data
+                ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+            }
         }
 
         // 타임아웃 설정
@@ -357,11 +446,9 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
     private (byte[] buffer, int length) EncodePacket(IPacket packet, ushort msgSeq, long stageId)
     {
-        var msgIdByteCount = Encoding.UTF8.GetByteCount(packet.MsgId);
-        if (msgIdByteCount > 255)
-        {
-            throw new ArgumentException($"Message ID too long: {packet.MsgId}");
-        }
+        _ = stageId;
+        var msgIdBytes = GetOrAddMsgIdUtf8(packet.MsgId);
+        var msgIdByteCount = msgIdBytes.Length;
 
         var payloadSpan = packet.Payload.DataSpan;
 
@@ -379,8 +466,8 @@ internal sealed class ClientNetwork : IAsyncDisposable
         // MsgIdLen (1 byte)
         buffer[offset++] = (byte)msgIdByteCount;
 
-        // MsgId (N bytes) - direct encoding to buffer
-        Encoding.UTF8.GetBytes(packet.MsgId, buffer.AsSpan(offset, msgIdByteCount));
+        // MsgId (N bytes)
+        msgIdBytes.AsSpan().CopyTo(buffer.AsSpan(offset, msgIdByteCount));
         offset += msgIdByteCount;
 
         // MsgSeq (2 bytes, little-endian)
@@ -391,6 +478,63 @@ internal sealed class ClientNetwork : IAsyncDisposable
         payloadSpan.CopyTo(buffer.AsSpan(offset));
 
         return (buffer, totalSize);
+    }
+
+    private (byte[] buffer, int length) EncodePacketHeader(string msgId, ushort msgSeq, int payloadLength)
+    {
+        var msgIdBytes = GetOrAddMsgIdUtf8(msgId);
+        var msgIdByteCount = msgIdBytes.Length;
+
+        // Header: Length(4) + MsgIdLen(1) + MsgId(N) + MsgSeq(2)
+        var headerLength = 4 + 1 + msgIdByteCount + 2;
+        var contentSize = 1 + msgIdByteCount + 2 + payloadLength;
+        var headerBuffer = ArrayPool<byte>.Shared.Rent(headerLength);
+
+        int offset = 0;
+        BinaryPrimitives.WriteInt32LittleEndian(headerBuffer.AsSpan(offset), contentSize);
+        offset += 4;
+
+        headerBuffer[offset++] = (byte)msgIdByteCount;
+        msgIdBytes.AsSpan().CopyTo(headerBuffer.AsSpan(offset, msgIdByteCount));
+        offset += msgIdByteCount;
+
+        BinaryPrimitives.WriteUInt16LittleEndian(headerBuffer.AsSpan(offset), msgSeq);
+
+        return (headerBuffer, headerLength);
+    }
+
+    private static bool TryGetPayloadForSegmentedSend(IPayload payload, out ReadOnlyMemory<byte> payloadMemory)
+    {
+        switch (payload)
+        {
+            case EmptyPayload:
+            case BytePayload:
+            case MemoryPayload:
+            case ProtoPayload:
+                payloadMemory = payload.DataMemory;
+                return true;
+            default:
+                // Unknown or pooled payloads can be disposed by caller immediately after Send/Request.
+                // Fallback path copies payload into an owned send buffer to preserve existing semantics.
+                payloadMemory = default;
+                return false;
+        }
+    }
+
+    private byte[] GetOrAddMsgIdUtf8(string msgId)
+    {
+        return _msgIdUtf8Cache.GetOrAdd(msgId, static key =>
+        {
+            var byteCount = Encoding.UTF8.GetByteCount(key);
+            if (byteCount > 255)
+            {
+                throw new ArgumentException($"Message ID too long: {key}");
+            }
+
+            var bytes = new byte[byteCount];
+            Encoding.UTF8.GetBytes(key, bytes.AsSpan());
+            return bytes;
+        });
     }
 
     #endregion
@@ -463,7 +607,11 @@ internal sealed class ClientNetwork : IAsyncDisposable
             if (pending.IsAuthenticate && parsed.ErrorCode == 0)
             {
                 _isAuthenticated = true;
-                if (TryExtractStageIdFromAuthPayload(parsed.Payload.DataSpan, out var authStageId) && authStageId > 0)
+                if (parsed.StageId > 0)
+                {
+                    Interlocked.Exchange(ref _stageId, parsed.StageId);
+                }
+                else if (TryExtractStageIdFromAuthPayload(parsed.Payload.DataSpan, out var authStageId) && authStageId > 0)
                 {
                     Interlocked.Exchange(ref _stageId, authStageId);
                 }

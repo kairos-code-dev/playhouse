@@ -45,4 +45,15 @@ public interface IConnection : IAsyncDisposable
     /// <param name="data">Data to send</param>
     /// <param name="cancellationToken">Cancellation token</param>
     ValueTask SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends header and payload as a single logical packet.
+    /// </summary>
+    /// <param name="header">Encoded packet header bytes</param>
+    /// <param name="payload">Packet payload bytes</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    ValueTask SendAsync(
+        ReadOnlyMemory<byte> header,
+        ReadOnlyMemory<byte> payload,
+        CancellationToken cancellationToken = default);
 }
