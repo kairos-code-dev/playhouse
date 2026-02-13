@@ -57,7 +57,10 @@ public sealed class RoutePacket : IDisposable
     public static RoutePacket FromFrames(byte[] headerBytes, byte[] payloadBytes, string? senderNid = null)
     {
         var header = RouteHeader.Parser.ParseFrom(headerBytes);
-        if (senderNid != null) header.From = senderNid;
+        if (string.IsNullOrWhiteSpace(header.From) && !string.IsNullOrWhiteSpace(senderNid))
+        {
+            header.From = senderNid;
+        }
         
         var payload = new MemoryPayload(payloadBytes);
         return Create(header, payload);
@@ -73,7 +76,10 @@ public sealed class RoutePacket : IDisposable
         string? senderNid = null,
         Action<RouteHeader>? returnHeaderAction = null)
     {
-        if (senderNid != null) header.From = senderNid;
+        if (string.IsNullOrWhiteSpace(header.From) && !string.IsNullOrWhiteSpace(senderNid))
+        {
+            header.From = senderNid;
+        }
 
         var payload = MessagePoolPayload.Create(payloadBuffer, payloadSize);
         return Create(header, payload, ownsPayload: true, returnHeaderAction: returnHeaderAction);

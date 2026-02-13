@@ -86,17 +86,17 @@ var minPoolSize = 100;
 var maxPoolSize = 1000;
 var diagLevel = -1;
 
-rootCommand.SetHandler((zmq, http, sid, peersStr, logDirectory, minPool, maxPool, dl) =>
+rootCommand.SetHandler((context) =>
 {
-    zmqPort = zmq;
-    httpPort = http;
-    serverId = sid;
-    peers = peersStr;
-    logDir = logDirectory;
-    minPoolSize = minPool;
-    maxPoolSize = maxPool;
-    diagLevel = dl;
-}, zmqPortOption, httpPortOption, serverIdOption, peersOption, logDirOption, minPoolSizeOption, maxPoolSizeOption, diagLevelOption);
+    zmqPort = context.ParseResult.GetValueForOption(zmqPortOption);
+    httpPort = context.ParseResult.GetValueForOption(httpPortOption);
+    serverId = context.ParseResult.GetValueForOption(serverIdOption)!;
+    peers = context.ParseResult.GetValueForOption(peersOption)!;
+    logDir = context.ParseResult.GetValueForOption(logDirOption)!;
+    minPoolSize = context.ParseResult.GetValueForOption(minPoolSizeOption);
+    maxPoolSize = context.ParseResult.GetValueForOption(maxPoolSizeOption);
+    diagLevel = context.ParseResult.GetValueForOption(diagLevelOption);
+});
 
 await rootCommand.InvokeAsync(args);
 
@@ -168,6 +168,8 @@ try
         options.BindEndpoint = $"tcp://127.0.0.1:{zmqPort}";
         options.MinTaskPoolSize = minPoolSize;
         options.MaxTaskPoolSize = maxPoolSize;
+        options.SendHighWatermark = 1_000_000;
+        options.ReceiveHighWatermark = 1_000_000;
     })
     .UseSystemController(StaticSystemController.Parse(peers))
     .UseController<BenchmarkApiController>();

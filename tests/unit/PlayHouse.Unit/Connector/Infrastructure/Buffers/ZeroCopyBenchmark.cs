@@ -25,7 +25,7 @@ public class ZeroCopyBenchmark
         _output = output;
     }
 
-    [Fact(DisplayName = "벤치마크 - Before: 3번 복사 방식")]
+    [Fact(DisplayName = "벤치마크 - Before: 3번 복사 방식", Skip = "수동 실행용 벤치마크 테스트")]
     public void Benchmark_OldWay_ThreeCopies()
     {
         _output.WriteLine("=== Before: 3번 복사 방식 ===");
@@ -51,7 +51,7 @@ public class ZeroCopyBenchmark
         _output.WriteLine($"Throughput: {Iterations / sw.Elapsed.TotalSeconds:N0} packets/sec");
     }
 
-    [Fact(DisplayName = "벤치마크 - After: Zero-copy RingBuffer")]
+    [Fact(DisplayName = "벤치마크 - After: Zero-copy RingBuffer", Skip = "수동 실행용 벤치마크 테스트")]
     public void Benchmark_NewWay_ZeroCopy()
     {
         _output.WriteLine("=== After: Zero-copy RingBuffer ===");
@@ -77,7 +77,7 @@ public class ZeroCopyBenchmark
         _output.WriteLine($"Throughput: {Iterations / sw.Elapsed.TotalSeconds:N0} packets/sec");
     }
 
-    [Fact(DisplayName = "벤치마크 - 비교 결과")]
+    [Fact(DisplayName = "벤치마크 - 비교 결과", Skip = "수동 실행용 벤치마크 테스트")]
     public void Benchmark_Comparison()
     {
         _output.WriteLine("=== 성능 비교 ===");

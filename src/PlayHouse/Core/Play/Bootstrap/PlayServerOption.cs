@@ -40,6 +40,16 @@ public sealed class PlayServerOption
     public int RequestTimeoutMs { get; set; } = 30000;
 
     /// <summary>
+    /// 송신 High Water Mark (기본값: 300000).
+    /// </summary>
+    public int SendHighWatermark { get; set; } = 300000;
+
+    /// <summary>
+    /// 수신 High Water Mark (기본값: 300000).
+    /// </summary>
+    public int ReceiveHighWatermark { get; set; } = 300000;
+
+    /// <summary>
     /// 인증 메시지 ID.
     /// 미인증 클라이언트가 전송할 수 있는 유일한 메시지입니다.
     /// 이 메시지 외의 메시지가 미인증 상태에서 수신되면 연결이 끊어집니다.

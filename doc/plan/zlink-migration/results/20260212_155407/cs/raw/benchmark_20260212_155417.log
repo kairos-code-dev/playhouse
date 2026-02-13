@@ -1,0 +1,54 @@
+2026-02-12 15:54:17.375 [INF] ================================================================================
+2026-02-12 15:54:17.387 [INF] PlayHouse Benchmark Client
+2026-02-12 15:54:17.387 [INF] ================================================================================
+2026-02-12 15:54:17.387 [INF] Server: 127.0.0.1:16110
+2026-02-12 15:54:17.389 [INF] HTTP API: 127.0.0.1:5080
+2026-02-12 15:54:17.389 [INF] Mode: "Send"
+2026-02-12 15:54:17.390 [INF] Connections: 10,000
+2026-02-12 15:54:17.391 [INF] Duration: 10 seconds per test
+2026-02-12 15:54:17.391 [INF] Message size: 64 bytes
+2026-02-12 15:54:17.391 [INF] Output: /home/hep7/project/kairos/playhouse/tests/benchmark/benchmark_cs/benchmark-results
+2026-02-12 15:54:17.391 [INF] ================================================================================
+2026-02-12 15:54:17.393 [INF] Resetting server metrics...
+2026-02-12 15:54:18.426 [INF] [15:54:18] Starting benchmark...
+2026-02-12 15:54:18.426 [INF]   Mode: "Send"
+2026-02-12 15:54:18.426 [INF]   Connections: 10,000
+2026-02-12 15:54:18.426 [INF]   Duration: 10 seconds
+2026-02-12 15:54:18.426 [INF]   Warmup: 3 seconds
+2026-02-12 15:54:18.427 [INF]   Message size: 64 bytes
+2026-02-12 15:54:18.427 [INF] [15:54:18] Phase 1: Connecting and authenticating...
+2026-02-12 15:54:19.391 [INF]   Phase 1 completed: 10,000/10,000 connected (failed: 0)
+2026-02-12 15:54:19.391 [INF] [15:54:19] Phase 2: Warming up (3 seconds)...
+2026-02-12 15:54:23.840 [INF]   Phase 2 completed: Warmup finished.
+2026-02-12 15:54:23.840 [INF] [15:54:23] Phase 3: Starting benchmark for all ccu...
+2026-02-12 15:54:34.486 [INF] [15:54:34] Phase 3 completed: Benchmark finished.
+2026-02-12 15:54:34.486 [INF] Waiting for server to cleanup stages and stabilize metrics...
+2026-02-12 15:54:38.813 [INF] 
+2026-02-12 15:54:38.814 [INF] ================================================================================
+2026-02-12 15:54:38.814 [INF] Benchmark Results Summary
+2026-02-12 15:54:38.814 [INF] ================================================================================
+2026-02-12 15:54:38.815 [INF] Config: 10,000 CCU x 10s, Request: 64B, Mode: "Send"
+2026-02-12 15:54:38.815 [INF] 
+2026-02-12 15:54:38.815 [INF] RespSize |   Time |   Srv TPS |  Srv P99 |  Srv Mem |     Srv GC |  Cli RTT |   Cli TPS |  Cli Mem |     Cli GC
+2026-02-12 15:54:38.816 [INF] -------- | ------ | --------- | -------- | -------- | ---------- | -------- | --------- | -------- | ----------
+2026-02-12 15:54:38.816 [INF]      64B | 16.06s |  477,646/s |   0.00ms | 6702.6MB |   335/68/1 | 833.58ms |  487,011/s | 3010.1MB |   185/74/2
+2026-02-12 15:54:38.817 [INF] 
+2026-02-12 15:54:38.817 [INF] --------------------------------------------------------------------------------
+2026-02-12 15:54:38.817 [INF] [Response Size: 64 bytes]
+2026-02-12 15:54:38.817 [INF]   Elapsed: 16.06s
+2026-02-12 15:54:38.817 [INF]   Server:
+2026-02-12 15:54:38.817 [INF]     Processed   : 9,588,070 messages
+2026-02-12 15:54:38.817 [INF]     Throughput  : 477,646 msg/s (58.31 MB/s)
+2026-02-12 15:54:38.817 [INF]     Latency     : Mean=0.00ms, P50=0.00ms, P95=0.00ms, P99=0.00ms
+2026-02-12 15:54:38.817 [INF]     Memory      : 6702.62 MB, GC: Gen0=335, Gen1=68, Gen2=1
+2026-02-12 15:54:38.817 [INF]   Client:
+2026-02-12 15:54:38.818 [INF]     Sent/Recv   : 6,896,925 / 6,896,925 messages
+2026-02-12 15:54:38.818 [INF]     RTT Latency : Mean=428.44ms, P50=461.53ms, P95=653.89ms, P99=833.58ms
+2026-02-12 15:54:38.818 [INF]     Throughput  : 487,011 msg/s
+2026-02-12 15:54:38.818 [INF]     Memory      : 3010.06 MB, GC: Gen0=185, Gen1=74, Gen2=2
+2026-02-12 15:54:38.818 [INF] ================================================================================
+2026-02-12 15:54:38.834 [INF] 
+2026-02-12 15:54:38.834 [INF] Results saved to:
+2026-02-12 15:54:38.834 [INF]   Log:  /home/hep7/project/kairos/playhouse/tests/benchmark/benchmark_cs/benchmark-results/benchmark_20260212_155417.log
+2026-02-12 15:54:38.834 [INF]   JSON: /home/hep7/project/kairos/playhouse/tests/benchmark/benchmark_cs/benchmark-results/benchmark_20260212_155417.json
+2026-02-12 15:54:38.834 [INF]   CSV:  /home/hep7/project/kairos/playhouse/tests/benchmark/benchmark_cs/benchmark-results/benchmark_summary.csv

@@ -1,8 +1,9 @@
 #nullable enable
 
-using Net.Zmq;
+using System;
 using PlayHouse.Runtime.ServerMesh.Message;
 using PlayHouse.Runtime.ServerMesh.PlaySocket;
+using Zlink;
 
 namespace PlayHouse.Runtime.ServerMesh.Communicator;
 
@@ -12,7 +13,8 @@ namespace PlayHouse.Runtime.ServerMesh.Communicator;
 /// </summary>
 internal sealed class PlayCommunicator : ICommunicator, ICommunicateListener
 {
-    private readonly Context _context;
+    private readonly Context _serverContext;
+    private readonly Context _clientContext;
     private readonly IPlaySocket _serverSocket;  // For Bind + Receive
     private readonly IPlaySocket _clientSocket;  // For Connect + Send
     private readonly XClientCommunicator _client;
@@ -43,11 +45,13 @@ internal sealed class PlayCommunicator : ICommunicator, ICommunicateListener
     /// <param name="config">Server configuration.</param>
     public PlayCommunicator(ServerConfig config)
     {
-        _context = new Context();
+        _serverContext = new Context();
+        _clientContext = new Context();
 
         var socketConfig = PlaySocketConfig.FromServerConfig(config);
-        _serverSocket = new ZmqPlaySocket(config.ServerId, _context, socketConfig);
-        _clientSocket = new ZmqPlaySocket(config.ServerId, _context, socketConfig);
+        var sharedReadyRouterIds = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+        _serverSocket = new ZlinkPlaySocket(config.ServerId, _serverContext, socketConfig, sharedReadyRouterIds);
+        _clientSocket = new ZlinkPlaySocket(config.ServerId, _clientContext, socketConfig, sharedReadyRouterIds);
 
         _server = new XServerCommunicator(_serverSocket, config.BindEndpoint);
         _client = new XClientCommunicator(_clientSocket);
@@ -123,10 +127,12 @@ internal sealed class PlayCommunicator : ICommunicator, ICommunicateListener
         _disposed = true;
 
         Stop();                  // 1. _running = false
-        _context.Shutdown();     // 2. 블로킹 해제
-        AwaitTermination();      // 3. 스레드 종료 대기
-        _serverSocket.Dispose(); // 4. 서버 소켓 정리
-        _clientSocket.Dispose(); // 5. 클라이언트 소켓 정리
-        _context.Dispose();      // 6. Context 정리
+        _serverContext.Shutdown(); // 2. 블로킹 해제
+        _clientContext.Shutdown(); // 2. 블로킹 해제
+        AwaitTermination();        // 3. 스레드 종료 대기
+        _serverSocket.Dispose();   // 4. 서버 소켓 정리
+        _clientSocket.Dispose();   // 5. 클라이언트 소켓 정리
+        _serverContext.Dispose();  // 6. Context 정리
+        _clientContext.Dispose();  // 6. Context 정리
     }
 }

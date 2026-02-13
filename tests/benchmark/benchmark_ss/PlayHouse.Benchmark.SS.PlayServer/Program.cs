@@ -173,6 +173,8 @@ try
         options.DefaultStageType = "BenchmarkStage"; // Auto-create stages
         options.MinTaskPoolSize = minPoolSize;
         options.MaxTaskPoolSize = maxPoolSize;
+        options.SendHighWatermark = 1_000_000;
+        options.ReceiveHighWatermark = 1_000_000;
     })
     .UseStage<BenchmarkStage, BenchmarkActor>("BenchmarkStage", StageMode.Single)
     .UseSystemController(StaticSystemController.Parse(peers));

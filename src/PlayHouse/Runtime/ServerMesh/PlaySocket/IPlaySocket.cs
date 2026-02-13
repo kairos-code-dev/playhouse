@@ -5,12 +5,12 @@ using PlayHouse.Runtime.ServerMesh.Message;
 namespace PlayHouse.Runtime.ServerMesh.PlaySocket;
 
 /// <summary>
-/// Interface for ZMQ-based server-to-server communication sockets.
+/// Interface for server-to-server communication sockets.
 /// </summary>
 /// <remarks>
 /// Implements Router-Router pattern for bidirectional messaging.
 /// 3-Frame message structure:
-/// - Frame 0: Target ServerId (UTF-8)
+/// - Frame 0: Target router ID (UTF-8)
 /// - Frame 1: RouteHeader (Protobuf serialized)
 /// - Frame 2: Payload (binary)
 /// </remarks>
@@ -36,7 +36,8 @@ internal interface IPlaySocket : IDisposable
     /// Connects to a remote socket.
     /// </summary>
     /// <param name="endpoint">Connect address (e.g., "tcp://localhost:5555").</param>
-    void Connect(string endpoint);
+    /// <param name="routerId">Optional router ID alias used by ROUTER sockets.</param>
+    void Connect(string endpoint, string? routerId = null);
 
     /// <summary>
     /// Disconnects from a remote socket.
@@ -47,18 +48,30 @@ internal interface IPlaySocket : IDisposable
     /// <summary>
     /// Sends a RuntimeRoutePacket to the specified target.
     /// </summary>
-    /// <param name="serverId">Target server ID.</param>
+    /// <param name="routerId">Target router ID.</param>
     /// <param name="packet">Route packet to send.</param>
     /// <remarks>
     /// Packet will be disposed after sending. Sends as 3-frame multipart message.
     /// </remarks>
-    void Send(string serverId, RoutePacket packet);
+    void Send(string routerId, RoutePacket packet);
 
     /// <summary>
     /// Receives a RoutePacket (blocking until message arrives).
     /// </summary>
     /// <returns>RoutePacket if received, null on error.</returns>
     RoutePacket? Receive();
+
+    /// <summary>
+    /// Returns whether the target router ID is ready for send.
+    /// </summary>
+    /// <param name="routerId">Target router ID.</param>
+    bool IsRouterIdReady(string routerId);
+
+    /// <summary>
+    /// Marks the target router ID as not ready.
+    /// </summary>
+    /// <param name="routerId">Target router ID.</param>
+    void MarkRouterIdNotReady(string routerId);
 
     /// <summary>
     /// Receives raw frames and echoes them back immediately for diagnostic purposes.
@@ -76,12 +89,12 @@ public sealed class PlaySocketConfig
     /// <summary>
     /// Gets or sets the send high water mark.
     /// </summary>
-    public int SendHighWatermark { get; set; } = 100000;
+    public int SendHighWatermark { get; set; } = 300000;
 
     /// <summary>
     /// Gets or sets the receive high water mark.
     /// </summary>
-    public int ReceiveHighWatermark { get; set; } = 100000;
+    public int ReceiveHighWatermark { get; set; } = 300000;
 
     /// <summary>
     /// Gets or sets whether to enable TCP keepalive.

@@ -66,15 +66,15 @@ public class ServerConfigTests
         config.RequestTimeoutMs.Should().Be(30000);
     }
 
-    [Fact(DisplayName = "기본 High Water Mark는 1000이다")]
+    [Fact(DisplayName = "기본 High Water Mark는 300000이다")]
     public void ServerConfig_WithDefaults_HasDefaultHighWatermarks()
     {
         // Given & When
         var config = new ServerConfig(ServerType.Play, 1, "test-1", "tcp://*:5555");
 
         // Then
-        config.SendHighWatermark.Should().Be(1000);
-        config.ReceiveHighWatermark.Should().Be(1000);
+        config.SendHighWatermark.Should().Be(300000);
+        config.ReceiveHighWatermark.Should().Be(300000);
     }
 
     [Fact(DisplayName = "TCP Keepalive는 기본적으로 활성화된다")]

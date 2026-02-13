@@ -1,0 +1,23 @@
+[GC] Server GC enabled, LatencyMode set to Batch
+[15:57:45 INF] ================================================================================
+[15:57:45 INF] PlayHouse Server-to-Server Benchmark API Server
+[15:57:45 INF] ================================================================================
+[15:57:45 INF] Server ID: api-1
+[15:57:45 INF] ZMQ Port (server-to-server): 16201
+[15:57:45 INF] HTTP API Port: 5081
+[15:57:45 INF] Peers: play-1=tcp://127.0.0.1:16100
+[15:57:45 INF] Log Directory: /home/hep7/project/kairos/playhouse/logs
+[15:57:45 INF] HTTP API Endpoints:
+[15:57:45 INF]   POST http://localhost:5081/benchmark/shutdown - Shutdown server
+[15:57:45 INF] ================================================================================
+[15:57:45 INF] ApiReflection initialized with 2 handlers
+[15:57:45 INF] Managed MessagePool warmed up.
+[ServerAddressResolver] Connecting to server: api-1 at tcp://127.0.0.1:16201
+[ServerAddressResolver] Connecting to server: play-1 at tcp://127.0.0.1:16100
+[15:57:45 INF] API Server started (ZMQ: 16201) with DiagnosticLevel: -1
+[15:57:45 INF] SystemController will manage connections to peers: play-1=tcp://127.0.0.1:16100
+[15:57:45 INF] HTTP API server started on port 5081
+[15:57:45 INF] Press Ctrl+C to stop...
+[15:58:06 INF] Shutdown requested via HTTP API
+[15:58:06 INF] Shutting down...
+[15:58:06 INF] API Server stopped.
