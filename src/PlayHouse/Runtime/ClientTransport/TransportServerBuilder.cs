@@ -3,8 +3,7 @@
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
-using PlayHouse.Runtime.ClientTransport.Tcp;
-using PlayHouse.Runtime.ClientTransport.WebSocket;
+using PlayHouse.Runtime.ClientTransport.Zlink;
 
 namespace PlayHouse.Runtime.ClientTransport;
 
@@ -60,13 +59,11 @@ public sealed class TransportServerBuilder
     /// <returns>This builder for chaining.</returns>
     public TransportServerBuilder AddTcp(int port, string? bindAddress = null)
     {
-        var endpoint = new IPEndPoint(
-            string.IsNullOrEmpty(bindAddress) ? IPAddress.Any : IPAddress.Parse(bindAddress),
-            port);
+        var endpoint = CreateEndpoint(port, bindAddress);
 
         _serverFactories.Add(composite =>
         {
-            var server = new TcpTransportServer(endpoint, _options, null, _onMessage, _onDisconnect, _logger);
+            var server = new ZlinkStreamTransportServer(endpoint, _options, _onMessage, _onDisconnect, _logger);
             composite.Add(server);
         });
 
@@ -82,19 +79,18 @@ public sealed class TransportServerBuilder
     /// <returns>This builder for chaining.</returns>
     public TransportServerBuilder AddTcpWithTls(int port, X509Certificate2 certificate, string? bindAddress = null)
     {
-        var endpoint = new IPEndPoint(
-            string.IsNullOrEmpty(bindAddress) ? IPAddress.Any : IPAddress.Parse(bindAddress),
-            port);
-
-        var tlsOptions = new TlsOptions
-        {
-            Enabled = true,
-            Certificate = certificate
-        };
+        var endpoint = CreateEndpoint(port, bindAddress);
+        var tlsEndpoint = ZlinkStreamTransportServer.BuildEndpoint("tls", endpoint);
 
         _serverFactories.Add(composite =>
         {
-            var server = new TcpTransportServer(endpoint, _options, tlsOptions, _onMessage, _onDisconnect, _logger);
+            var server = new ZlinkStreamTransportServer(
+                tlsEndpoint,
+                _options,
+                _onMessage,
+                _onDisconnect,
+                _logger,
+                certificate);
             composite.Add(server);
         });
 
@@ -104,13 +100,17 @@ public sealed class TransportServerBuilder
     /// <summary>
     /// Adds a WebSocket server.
     /// </summary>
-    /// <param name="path">The URL path to handle (e.g., "/ws").</param>
+    /// <param name="path">
+    /// The WebSocket path (e.g., "/ws") or full endpoint (e.g., "ws://127.0.0.1:8080/ws").
+    /// </param>
     /// <returns>This builder for chaining.</returns>
     public TransportServerBuilder AddWebSocket(string path = "/ws")
     {
+        var endpoint = ResolveWebSocketEndpoint(path, secure: false);
+
         _serverFactories.Add(composite =>
         {
-            var server = new WebSocketTransportServer(path, _options, _onMessage, _onDisconnect, _logger);
+            var server = new ZlinkStreamTransportServer(endpoint, _options, _onMessage, _onDisconnect, _logger);
             composite.Add(server);
         });
 
@@ -120,18 +120,24 @@ public sealed class TransportServerBuilder
     /// <summary>
     /// Adds a WebSocket server with TLS.
     /// </summary>
-    /// <param name="path">The URL path to handle (e.g., "/ws").</param>
+    /// <param name="path">
+    /// The WebSocket path (e.g., "/ws") or full endpoint (e.g., "wss://127.0.0.1:8443/ws").
+    /// </param>
     /// <param name="certificate">The server certificate for TLS.</param>
     /// <returns>This builder for chaining.</returns>
-    /// <remarks>
-    /// WebSocket TLS (WSS) requires HTTPS configuration in ASP.NET Core.
-    /// The certificate is stored for use when configuring the HTTPS endpoint.
-    /// </remarks>
     public TransportServerBuilder AddWebSocketWithTls(string path, X509Certificate2 certificate)
     {
+        var endpoint = ResolveWebSocketEndpoint(path, secure: true);
+
         _serverFactories.Add(composite =>
         {
-            var server = new WebSocketTransportServer(path, _options, _onMessage, _onDisconnect, _logger, certificate);
+            var server = new ZlinkStreamTransportServer(
+                endpoint,
+                _options,
+                _onMessage,
+                _onDisconnect,
+                _logger,
+                certificate);
             composite.Add(server);
         });
 
@@ -165,6 +171,70 @@ public sealed class TransportServerBuilder
             factory(result);
         }
         return result;
+    }
+
+    private static IPEndPoint CreateEndpoint(int port, string? bindAddress)
+    {
+        var address = string.IsNullOrEmpty(bindAddress)
+            ? IPAddress.Any
+            : IPAddress.Parse(bindAddress);
+
+        return new IPEndPoint(address, port);
+    }
+
+    private static string ResolveWebSocketEndpoint(string value, bool secure)
+    {
+        if (TryGetEndpointScheme(value, out var scheme))
+        {
+            if (scheme is not ("ws" or "wss"))
+            {
+                throw new ArgumentException("WebSocket endpoint must use ws:// or wss:// scheme.", nameof(value));
+            }
+
+            if (secure && scheme == "ws")
+            {
+                return "wss://" + value.Trim()["ws://".Length..];
+            }
+
+            if (!secure && scheme == "wss")
+            {
+                return "ws://" + value.Trim()["wss://".Length..];
+            }
+
+            return value.Trim();
+        }
+
+        var normalizedPath = NormalizeWebSocketPath(value);
+        return $"{(secure ? "wss" : "ws")}://*:*{normalizedPath}";
+    }
+
+    private static string NormalizeWebSocketPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "/";
+        }
+
+        return path[0] == '/' ? path : "/" + path;
+    }
+
+    private static bool TryGetEndpointScheme(string value, out string scheme)
+    {
+        scheme = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        var separator = trimmed.IndexOf("://", StringComparison.Ordinal);
+        if (separator <= 0)
+        {
+            return false;
+        }
+
+        scheme = trimmed[..separator].ToLowerInvariant();
+        return true;
     }
 }
 

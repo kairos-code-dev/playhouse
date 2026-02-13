@@ -272,7 +272,7 @@ internal sealed class TcpConnection : IConnection
                 {
                     // 1. Read packet length (4 bytes)
                     await ReadExactlyAsync(_headerBuffer, 0, 4, cancellationToken).ConfigureAwait(false);
-                    var contentSize = BinaryPrimitives.ReadInt32LittleEndian(_headerBuffer);
+                    var contentSize = ReadContentLength(_headerBuffer);
 
                     // Fix #7: Validate packet size bounds before reading
                     if (contentSize <= 0 || contentSize > 10 * 1024 * 1024)
@@ -407,6 +407,12 @@ internal sealed class TcpConnection : IConnection
             }
             totalRead += bytesRead;
         }
+    }
+
+    private int ReadContentLength(ReadOnlySpan<byte> bytes)
+    {
+        // Zlink STREAM raw framing uses network byte order on all transports.
+        return BinaryPrimitives.ReadInt32BigEndian(bytes);
     }
 
     private void HandleDisconnection(Exception? exception)

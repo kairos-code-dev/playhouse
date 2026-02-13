@@ -459,8 +459,8 @@ internal sealed class ClientNetwork : IAsyncDisposable
 
         int offset = 0;
 
-        // Length prefix (4 bytes, little-endian)
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(offset), contentSize);
+        // Length prefix (4 bytes)
+        WriteContentLength(buffer.AsSpan(offset), contentSize);
         offset += 4;
 
         // MsgIdLen (1 byte)
@@ -491,7 +491,7 @@ internal sealed class ClientNetwork : IAsyncDisposable
         var headerBuffer = ArrayPool<byte>.Shared.Rent(headerLength);
 
         int offset = 0;
-        BinaryPrimitives.WriteInt32LittleEndian(headerBuffer.AsSpan(offset), contentSize);
+        WriteContentLength(headerBuffer.AsSpan(offset), contentSize);
         offset += 4;
 
         headerBuffer[offset++] = (byte)msgIdByteCount;
@@ -501,6 +501,12 @@ internal sealed class ClientNetwork : IAsyncDisposable
         BinaryPrimitives.WriteUInt16LittleEndian(headerBuffer.AsSpan(offset), msgSeq);
 
         return (headerBuffer, headerLength);
+    }
+
+    private void WriteContentLength(Span<byte> destination, int contentSize)
+    {
+        // Zlink STREAM raw framing uses network byte order on all transports.
+        BinaryPrimitives.WriteInt32BigEndian(destination, contentSize);
     }
 
     private static bool TryGetPayloadForSegmentedSend(IPayload payload, out ReadOnlyMemory<byte> payloadMemory)

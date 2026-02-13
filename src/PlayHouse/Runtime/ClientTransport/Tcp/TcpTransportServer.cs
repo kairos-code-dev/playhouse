@@ -15,7 +15,7 @@ namespace PlayHouse.Runtime.ClientTransport.Tcp;
 /// <remarks>
 /// Supports optional TLS encryption.
 /// </remarks>
-public sealed class TcpTransportServer : ITransportServer
+public sealed class TcpTransportServer : ITransportServer, ITransportTcpPortProvider
 {
     private readonly IPEndPoint _endpoint;
     private readonly TransportOptions _options;
@@ -39,6 +39,7 @@ public sealed class TcpTransportServer : ITransportServer
     /// Returns 0 if the server has not started yet.
     /// </summary>
     public int ActualPort => _listener.LocalEndpoint is IPEndPoint ep ? ep.Port : 0;
+    int ITransportTcpPortProvider.ActualTcpPort => ActualPort;
 
     /// <summary>
     /// Creates a new TCP transport server.
