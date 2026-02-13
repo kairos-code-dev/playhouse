@@ -14,7 +14,6 @@ using PlayHouse.Core.Play.Base;
 using PlayHouse.Core.Shared;
 using PlayHouse.Infrastructure.Memory;
 using PlayHouse.Runtime.ClientTransport;
-using PlayHouse.Runtime.ClientTransport.Tcp;
 using PlayHouse.Runtime.ClientTransport.WebSocket;
 using PlayHouse.Runtime.ServerMesh;
 using PlayHouse.Runtime.ServerMesh.Communicator;
@@ -834,15 +833,9 @@ public sealed class PlayServer : IPlayServerControl, IAsyncDisposable, ICommunic
     /// </summary>
     private int GetActualTcpPort()
     {
-        if (_transportServer is CompositeTransportServer composite)
+        if (_transportServer is ITransportTcpPortProvider portProvider)
         {
-            var tcpServer = composite.TcpServers.FirstOrDefault();
-            return tcpServer?.ActualPort ?? _options.TcpPort ?? 0;
-        }
-
-        if (_transportServer is TcpTransportServer tcp)
-        {
-            return tcp.ActualPort;
+            return portProvider.ActualTcpPort;
         }
 
         return _options.TcpPort ?? 0;

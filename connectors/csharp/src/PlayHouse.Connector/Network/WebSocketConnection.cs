@@ -261,7 +261,7 @@ internal sealed class WebSocketConnection : IConnection
                 }
 
                 // Peek and parse packet size (zero-copy)
-                _expectedPacketSize = ReadInt32LittleEndian(_receiveBuffer);
+                _expectedPacketSize = ReadInt32BigEndian(_receiveBuffer);
 
                 if (_expectedPacketSize <= 0 || _expectedPacketSize > 10 * 1024 * 1024)
                 {
@@ -297,7 +297,7 @@ internal sealed class WebSocketConnection : IConnection
         }
     }
 
-    private static int ReadInt32LittleEndian(RingBuffer buffer)
+    private static int ReadInt32BigEndian(RingBuffer buffer)
     {
         // Handle wrapped case
         if (buffer.Count < 4)
@@ -310,7 +310,7 @@ internal sealed class WebSocketConnection : IConnection
         {
             temp[i] = buffer.PeekByte(i);
         }
-        return BinaryPrimitives.ReadInt32LittleEndian(temp);
+        return BinaryPrimitives.ReadInt32BigEndian(temp);
     }
 
     private static IPacket ParseServerPacket(RingBuffer buffer, int packetSize)

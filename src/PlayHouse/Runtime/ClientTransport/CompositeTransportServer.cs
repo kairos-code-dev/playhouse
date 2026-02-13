@@ -13,7 +13,7 @@ namespace PlayHouse.Runtime.ClientTransport;
 /// Allows running TCP and WebSocket servers simultaneously.
 /// All sessions are accessible through a unified interface.
 /// </remarks>
-public sealed class CompositeTransportServer : ITransportServer
+public sealed class CompositeTransportServer : ITransportServer, ITransportTcpPortProvider
 {
     private readonly List<ITransportServer> _servers = new();
     private readonly ILogger _logger;
@@ -52,6 +52,12 @@ public sealed class CompositeTransportServer : ITransportServer
     /// </summary>
     public IEnumerable<TcpTransportServer> TcpServers =>
         _servers.OfType<TcpTransportServer>();
+
+    int ITransportTcpPortProvider.ActualTcpPort =>
+        _servers
+            .OfType<ITransportTcpPortProvider>()
+            .Select(s => s.ActualTcpPort)
+            .FirstOrDefault(p => p > 0);
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
