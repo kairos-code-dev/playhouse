@@ -20,6 +20,6 @@ jobs:
           pwsh -NoProfile -ExecutionPolicy Bypass -File $script
 
       - name: Upload release asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: connectors/unreal/dist/PlayHouseConnector-UE-*.zip
